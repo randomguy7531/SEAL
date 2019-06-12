@@ -32,12 +32,8 @@ namespace SEALNetTest
             Assert.IsNotNull(encParams3);
             Assert.AreEqual(SchemeType.CKKS, encParams3.Scheme);
 
-            Assert.AreEqual(encParams2.ParmsId, encParams3.ParmsId);
-            Assert.AreNotEqual(encParams.ParmsId, encParams2.ParmsId);
-
             EncryptionParameters copy = new EncryptionParameters(encParams);
 
-            Assert.AreEqual(encParams.ParmsId, copy.ParmsId);
             Assert.AreEqual(SchemeType.BFV, copy.Scheme);
             Assert.AreEqual(encParams, copy);
             Assert.AreEqual(encParams.GetHashCode(), copy.GetHashCode());
@@ -72,20 +68,19 @@ namespace SEALNetTest
             EncryptionParameters encParams = new EncryptionParameters(SchemeType.BFV);
 
             Assert.IsNotNull(encParams);
-            Assert.AreEqual(4, encParams.ParmsId.Block.Length);
 
             List<SmallModulus> coeffs = new List<SmallModulus>(encParams.CoeffModulus);
             Assert.IsNotNull(coeffs);
             Assert.AreEqual(0, coeffs.Count);
 
-            coeffs = new List<SmallModulus>(DefaultParams.CoeffModulus128(4096));
-            encParams.CoeffModulus = coeffs;
+            encParams.CoeffModulus = CoeffModulus.BFVDefault(4096);
 
             List<SmallModulus> newCoeffs = new List<SmallModulus>(encParams.CoeffModulus);
             Assert.IsNotNull(newCoeffs);
-            Assert.AreEqual(2, newCoeffs.Count);
-            Assert.AreEqual(0x007fffffff380001ul, newCoeffs[0].Value);
-            Assert.AreEqual(0x003fffffff000001ul, newCoeffs[1].Value);
+            Assert.AreEqual(3, newCoeffs.Count);
+            Assert.AreEqual(0xffffee001ul, newCoeffs[0].Value);
+            Assert.AreEqual(0xffffc4001ul, newCoeffs[1].Value);
+            Assert.AreEqual(0x1ffffe0001ul, newCoeffs[2].Value);
         }
 
         [TestMethod]
@@ -93,11 +88,7 @@ namespace SEALNetTest
         {
             TestDelegate save_load_test = delegate(SchemeType scheme)
             {
-                List<SmallModulus> coeffModulus = new List<SmallModulus>
-                {
-                    DefaultParams.SmallMods40Bit(0),
-                    DefaultParams.SmallMods40Bit(1)
-                };
+                List<SmallModulus> coeffModulus = (List<SmallModulus>)CoeffModulus.Create(8, new int[] { 40, 40 });
                 EncryptionParameters parms = new EncryptionParameters(scheme)
                 {
                     PolyModulusDegree = 8,
@@ -130,8 +121,6 @@ namespace SEALNetTest
                 Assert.AreNotSame(coeffModulus[1], loadedCoeffModulus[1]);
                 Assert.AreEqual(coeffModulus[0], loadedCoeffModulus[0]);
                 Assert.AreEqual(coeffModulus[1], loadedCoeffModulus[1]);
-                Assert.AreEqual(parms.NoiseMaxDeviation, loaded.NoiseMaxDeviation, delta: 0.001);
-                Assert.AreEqual(parms.NoiseStandardDeviation, loaded.NoiseStandardDeviation, delta: 0.001);
             };
             save_load_test(SchemeType.BFV);
             save_load_test(SchemeType.CKKS);
@@ -144,11 +133,7 @@ namespace SEALNetTest
             {
                 PolyModulusDegree = 8,
                 PlainModulus = new SmallModulus(257),
-                CoeffModulus = new List<SmallModulus>()
-                {
-                    DefaultParams.SmallMods40Bit(0),
-                    DefaultParams.SmallMods40Bit(1)
-                }
+                CoeffModulus = CoeffModulus.Create(8, new int[] { 40, 40 })
             };
 
             EncryptionParameters parms2 = new EncryptionParameters(SchemeType.CKKS);

@@ -13,8 +13,8 @@ namespace Microsoft.Research.SEAL
     /// <remarks>
     /// <para>
     /// Thread Safety
-    /// In general, reading from SecretKey is thread-safe as long as no other 
-    /// thread is concurrently mutating it. This is due to the underlying data 
+    /// In general, reading from SecretKey is thread-safe as long as no other
+    /// thread is concurrently mutating it. This is due to the underlying data
     /// structure storing the secret key not being thread-safe.
     /// </para>
     /// </remarks>
@@ -34,6 +34,16 @@ namespace Microsoft.Research.SEAL
         }
 
         /// <summary>
+        /// Creates a new SecretKey by initializing it with a pointer to a native object.
+        /// </summary>
+        /// <param name="secretKeyPtr">The native SecretKey pointer</param>
+        /// <param name="owned">Whether this instance owns the native pointer</param>
+        internal SecretKey(IntPtr secretKeyPtr, bool owned = true)
+            : base(secretKeyPtr, owned)
+        {
+        }
+
+        /// <summary>
         /// Creates a new SecretKey by copying an old one.
         /// </summary>
         /// <param name="copy">The SecretKey to copy from</param>
@@ -45,16 +55,6 @@ namespace Microsoft.Research.SEAL
 
             NativeMethods.SecretKey_Create(copy.NativePtr, out IntPtr ptr);
             NativePtr = ptr;
-        }
-
-        /// <summary>
-        /// Creates a new SecretKey by initializing it with a pointer to a native object.
-        /// </summary>
-        /// <param name="secretKeyPtr">The native SecretKey pointer</param>
-        /// <param name="owned">Whether this instance owns the native pointer</param>
-        internal SecretKey(IntPtr secretKeyPtr, bool owned = true)
-            : base(secretKeyPtr, owned)
-        {
         }
 
         /// <summary>
@@ -71,8 +71,12 @@ namespace Microsoft.Research.SEAL
         }
 
         /// <summary>
-        /// Returns a copy of the underlying Plaintext.
+        /// Returns the underlying Plaintext.
         /// </summary>
+        /// <remarks>
+        /// Returns the underlying Plaintext. The returned Plaintext is valid
+        /// only as long as the SecretKey is valid and not changed.
+        /// </remarks>
         public Plaintext Data
         {
             get
@@ -84,50 +88,16 @@ namespace Microsoft.Research.SEAL
         }
 
         /// <summary>
-        /// Check whether the current SecretKey is valid for a given SEALContext. If 
-        /// the given SEALContext is not set, the encryption parameters are invalid, 
-        /// or the SecretKey data does not match the SEALContext, this function returns 
-        /// false. Otherwise, returns true.
-        /// </summary>
-        /// <param name="context">The SEALContext</param>
-        /// <exception cref="ArgumentNullException">if context is null</exception>
-        public bool IsValidFor(SEALContext context)
-        {
-            if (null == context)
-                throw new ArgumentNullException(nameof(context));
-
-            NativeMethods.SecretKey_IsValidFor(NativePtr, context.NativePtr, out bool result);
-            return result;
-        }
-
-        /// <summary>
-        /// Check whether the current SecretKey is valid for a given SEALContext. If 
-        /// the given SEALContext is not set, the encryption parameters are invalid, 
-        /// or the SecretKey data does not match the SEALContext, this function returns
-        /// false. Otherwise, returns true. This function only checks the metadata
-        /// and not the secret key data itself.
-        /// </summary>
-        /// <param name="context">The SEALContext</param>
-        /// <exception cref="ArgumentNullException">if context is null</exception>
-        public bool IsMetadataValidFor(SEALContext context)
-        {
-            if (null == context)
-                throw new ArgumentNullException(nameof(context));
-
-            NativeMethods.SecretKey_IsMetadataValidFor(NativePtr, context.NativePtr, out bool result);
-            return result;
-        }
-
-        /// <summary>
         /// Saves the SecretKey to an output stream.
         /// </summary>
-        /// 
         /// <remarks>
-        /// Saves the SecretKey to an output stream. The output is in binary format and 
+        /// Saves the SecretKey to an output stream. The output is in binary format and
         /// not human-readable. The output stream must have the "binary" flag set.
         /// </remarks>
         /// <param name="stream">The stream to save the SecretKey to</param>
         /// <exception cref="ArgumentNullException">if stream is null</exception>
+        /// <exception cref="ArgumentException">if the SecretKey could not be written
+        /// to stream</exception>
         public void Save(Stream stream)
         {
             if (null == stream)
@@ -139,12 +109,13 @@ namespace Microsoft.Research.SEAL
         /// <summary>
         /// Loads a SecretKey from an input stream overwriting the current SecretKey.
         /// No checking of the validity of the SecretKey data against encryption
-        /// parameters is performed. This function should not be used unless the 
+        /// parameters is performed. This function should not be used unless the
         /// SecretKey comes from a fully trusted source.
         /// </summary>
         /// <param name="stream">The stream to load the SecretKey from</param>
         /// <exception cref="ArgumentNullException">if stream is null</exception>
-        /// <exception cref="ArgumentException">if a valid SecretKey could not be read from stream</exception>
+        /// <exception cref="ArgumentException">if SecretKey could not be read from
+        /// stream</exception>
         public void UnsafeLoad(Stream stream)
         {
             if (null == stream)
@@ -157,14 +128,13 @@ namespace Microsoft.Research.SEAL
         /// Loads a SecretKey from an input stream overwriting the current SecretKey.
         /// The loaded SecretKey is verified to be valid for the given SEALContext.
         /// </summary>
-        /// 
         /// <param name="context">The SEALContext</param>
         /// <param name="stream">The stream to load the SecretKey from</param>
         /// <exception cref="ArgumentNullException">if stream is null</exception>
         /// <exception cref="ArgumentException">if the context is not set or encryption
         /// parameters are not valid</exception>
-        /// <exception cref="ArgumentException">if the loaded SecretKey is invalid or is
-        /// invalid for the context</exception>
+        /// <exception cref="ArgumentException">if SecretKey could not be read from
+        /// stream or is invalid for the context</exception>
         public void Load(SEALContext context, Stream stream)
         {
             if (null == context)
@@ -173,15 +143,14 @@ namespace Microsoft.Research.SEAL
                 throw new ArgumentNullException(nameof(stream));
 
             UnsafeLoad(stream);
-
-            if (!IsValidFor(context))
+            if (!ValCheck.IsValidFor(this, context))
             {
                 throw new ArgumentException("SecretKey data is invalid for context");
             }
         }
 
         /// <summary>
-        /// Returns a reference to parmsId.
+        /// Returns a copy of ParmsId.
         /// </summary>
         public ParmsId ParmsId
         {

@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <vector>
 #include <tuple>
+#include "seal/smallmodulus.h"
 #include "seal/util/common.h"
 
 namespace seal
@@ -33,7 +34,7 @@ namespace seal
             {
                 return x;
             }
-            else 
+            else
             {
                 std::uint64_t f = x % y;
                 if (f == 0)
@@ -87,7 +88,7 @@ namespace seal
             return std::make_tuple(x, prev_a, prev_b);
         }
 
-        inline bool try_mod_inverse(std::uint64_t value, 
+        inline bool try_mod_inverse(std::uint64_t value,
             std::uint64_t modulus, std::uint64_t &result)
         {
 #ifdef SEAL_DEBUG
@@ -118,21 +119,31 @@ namespace seal
         }
 
         std::vector<std::uint64_t> multiplicative_orders(
-            std::vector<std::uint64_t> conjugate_classes, 
+            std::vector<std::uint64_t> conjugate_classes,
             std::uint64_t modulus);
 
-        std::vector<std::uint64_t> conjugate_classes(std::uint64_t modulus, 
+        std::vector<std::uint64_t> conjugate_classes(std::uint64_t modulus,
             std::uint64_t subgroup_generator);
 
-        void babystep_giantstep(std::uint64_t modulus, 
-            std::vector<std::uint64_t> &baby_steps, 
+        void babystep_giantstep(std::uint64_t modulus,
+            std::vector<std::uint64_t> &baby_steps,
             std::vector<std::uint64_t> &giant_steps);
 
         auto decompose_babystep_giantstep(
-            std::uint64_t modulus, 
-            std::uint64_t input, 
-            const std::vector<std::uint64_t> &baby_steps, 
+            std::uint64_t modulus,
+            std::uint64_t input,
+            const std::vector<std::uint64_t> &baby_steps,
             const std::vector<std::uint64_t> &giant_steps)
             -> std::pair<std::size_t, std::size_t>;
+
+        bool is_prime(const SmallModulus &modulus, std::size_t num_rounds = 40);
+
+        std::vector<SmallModulus> get_primes(std::size_t ntt_size, int bit_size,
+            std::size_t count);
+
+        inline SmallModulus get_prime(std::size_t ntt_size, int bit_size)
+        {
+            return get_primes(ntt_size, bit_size, 1)[0];
+        }
     }
 }

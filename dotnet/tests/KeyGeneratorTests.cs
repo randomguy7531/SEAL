@@ -14,7 +14,7 @@ namespace SEALNetTest
         [TestMethod]
         public void CreateTest()
         {
-            SEALContext context = GlobalContext.Context;
+            SEALContext context = GlobalContext.BFVContext;
             KeyGenerator keygen = new KeyGenerator(context);
 
             Assert.IsNotNull(keygen);
@@ -27,17 +27,17 @@ namespace SEALNetTest
 
             Ciphertext cipher = pubKey.Data;
             Assert.IsNotNull(cipher);
-            Assert.AreEqual(16384ul, cipher.UInt64Count);
+            Assert.AreEqual(81920ul, cipher.UInt64Count);
 
             Plaintext plain = secKey.Data;
             Assert.IsNotNull(plain);
-            Assert.AreEqual(8192ul, plain.CoeffCount);
+            Assert.AreEqual(40960ul, plain.CoeffCount);
         }
 
         [TestMethod]
         public void Create2Test()
         {
-            SEALContext context = GlobalContext.Context;
+            SEALContext context = GlobalContext.BFVContext;
             KeyGenerator keygen1 = new KeyGenerator(context);
             Encryptor encryptor1 = new Encryptor(context, keygen1.PublicKey);
             Decryptor decryptor1 = new Decryptor(context, keygen1.SecretKey);
@@ -83,14 +83,33 @@ namespace SEALNetTest
         }
 
         [TestMethod]
+        public void KeyCopyTest()
+        {
+            SEALContext context = GlobalContext.BFVContext;
+            PublicKey pk = null;
+            SecretKey sk = null;
+
+            using (KeyGenerator keygen = new KeyGenerator(context))
+            {
+                pk = keygen.PublicKey;
+                sk = keygen.SecretKey;
+            }
+
+            ParmsId parmsIdPK = pk.ParmsId;
+            ParmsId parmsIdSK = sk.ParmsId;
+            Assert.AreEqual(parmsIdPK, parmsIdSK);
+            Assert.AreEqual(parmsIdPK, context.KeyParmsId);
+        }
+
+        [TestMethod]
         public void ExceptionsTest()
         {
-            SEALContext context = GlobalContext.Context;
+            SEALContext context = GlobalContext.BFVContext;
             KeyGenerator keygen = new KeyGenerator(context);
             SecretKey secret = new SecretKey();
-            List<ulong> elts = new List<ulong>();
+            List<ulong> elts = new List<ulong> { 16385 };
             List<ulong> elts_null = null;
-            List<int> steps = new List<int>();
+            List<int> steps = new List<int> { 4096 };
             List<int> steps_null = null;
 
             Assert.ThrowsException<ArgumentNullException>(() => keygen = new KeyGenerator(null));
@@ -104,18 +123,11 @@ namespace SEALNetTest
             Assert.ThrowsException<ArgumentNullException>(() => keygen = new KeyGenerator(null, keygen.SecretKey, keygen.PublicKey));
             Assert.ThrowsException<ArgumentException>(() => keygen = new KeyGenerator(context, secret, keygen.PublicKey));
 
-            Assert.ThrowsException<ArgumentException>(() => keygen.RelinKeys(0, 1));
-            Assert.ThrowsException<ArgumentException>(() => keygen.RelinKeys(DefaultParams.DBCmax + 1, 1));
+            Assert.ThrowsException<ArgumentNullException>(() => keygen.GaloisKeys(elts_null));
+            Assert.ThrowsException<ArgumentException>(() => keygen.GaloisKeys(elts));
 
-            Assert.ThrowsException<ArgumentException>(() => keygen.GaloisKeys(0));
-            Assert.ThrowsException<ArgumentException>(() => keygen.GaloisKeys(DefaultParams.DBCmax + 1));
-
-            Assert.ThrowsException<ArgumentNullException>(() => keygen.GaloisKeys(30, elts_null));
-            Assert.ThrowsException<ArgumentException>(() => keygen.GaloisKeys(0, elts));
-
-            Assert.ThrowsException<ArgumentNullException>(() => keygen.GaloisKeys(30, steps_null));
-            Assert.ThrowsException<ArgumentException>(() => keygen.GaloisKeys(0, steps));
-            Assert.ThrowsException<InvalidOperationException>(() => keygen.GaloisKeys(30, new List<int> { 1 }));
+            Assert.ThrowsException<ArgumentNullException>(() => keygen.GaloisKeys(steps_null));
+            Assert.ThrowsException<ArgumentException>(() => keygen.GaloisKeys(steps));
         }
     }
 }

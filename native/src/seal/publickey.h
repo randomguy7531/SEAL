@@ -7,6 +7,7 @@
 #include <memory>
 #include "seal/ciphertext.h"
 #include "seal/context.h"
+#include "seal/valcheck.h"
 
 namespace seal
 {
@@ -15,7 +16,7 @@ namespace seal
 
     @par Thread Safety
     In general, reading from PublicKey is thread-safe as long as no other thread
-    is concurrently mutating it. This is due to the underlying data structure 
+    is concurrently mutating it. This is due to the underlying data structure
     storing the public key not being thread-safe.
 
     @see KeyGenerator for the class that generates the public key.
@@ -26,6 +27,7 @@ namespace seal
     class PublicKey
     {
         friend class KeyGenerator;
+        friend class KSwitchKeys;
 
     public:
         /**
@@ -78,47 +80,6 @@ namespace seal
         }
 
         /**
-        Check whether the current PublicKey is valid for a given SEALContext. If 
-        the given SEALContext is not set, the encryption parameters are invalid, 
-        or the PublicKey data does not match the SEALContext, this function returns 
-        false. Otherwise, returns true.
-
-        @param[in] context The SEALContext
-        */
-        inline bool is_valid_for(std::shared_ptr<const SEALContext> context) const noexcept
-        {
-            // Check metadata
-            if (!is_metadata_valid_for(context))
-            {
-                return false;
-            }
-
-            // Check the data
-            return pk_.is_valid_for(std::move(context));
-        }
-
-        /**
-        Check whether the current PublicKey is valid for a given SEALContext. If 
-        the given SEALContext is not set, the encryption parameters are invalid, 
-        or the PublicKey data does not match the SEALContext, this function returns 
-        false. Otherwise, returns true. This function only checks the metadata
-        and not the public key data itself.
-
-        @param[in] context The SEALContext
-        */
-        inline bool is_metadata_valid_for(std::shared_ptr<const SEALContext> context) const noexcept
-        {
-            // Verify parameters
-            if (!context || !context->parameters_set())
-            {
-                return false;
-            }
-            auto parms_id = context->first_parms_id();
-            return pk_.is_metadata_valid_for(std::move(context)) && 
-                pk_.is_ntt_form() && pk_.parms_id() == parms_id;
-        }
-
-        /**
         Saves the PublicKey to an output stream. The output is in binary format
         and not human-readable. The output stream must have the "binary" flag set.
 
@@ -133,7 +94,7 @@ namespace seal
         /**
         Loads a PublicKey from an input stream overwriting the current PublicKey.
         No checking of the validity of the PublicKey data against encryption
-        parameters is performed. This function should not be used unless the 
+        parameters is performed. This function should not be used unless the
         PublicKey comes from a fully trusted source.
 
         @param[in] stream The stream to load the PublicKey from
@@ -141,7 +102,9 @@ namespace seal
         */
         inline void unsafe_load(std::istream &stream)
         {
-            pk_.unsafe_load(stream);
+            Ciphertext new_pk(pk_.pool());
+            new_pk.unsafe_load(stream);
+            std::swap(pk_, new_pk);
         }
 
         /**
@@ -159,11 +122,13 @@ namespace seal
         inline void load(std::shared_ptr<SEALContext> context,
             std::istream &stream)
         {
-            unsafe_load(stream);
-            if (!is_valid_for(std::move(context)))
+            PublicKey new_pk(pool());
+            new_pk.unsafe_load(stream);
+            if (!is_valid_for(new_pk, std::move(context)))
             {
                 throw std::invalid_argument("PublicKey data is invalid");
             }
+            std::swap(*this, new_pk);
         }
 
         /**
@@ -190,7 +155,23 @@ namespace seal
             return pk_.pool();
         }
 
+        /**
+        Enables access to private members of seal::PublicKey for .NET wrapper.
+        */
+        struct PublicKeyPrivateHelper;
+
     private:
+        /**
+        Creates an empty public key.
+
+        @param[in] pool The MemoryPoolHandle pointing to a valid memory pool
+        @throws std::invalid_argument if pool is uninitialized
+        */
+        PublicKey(MemoryPoolHandle pool) :
+            pk_(std::move(pool))
+        {
+        }
+
         Ciphertext pk_;
     };
 }

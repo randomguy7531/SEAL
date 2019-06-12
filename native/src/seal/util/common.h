@@ -18,17 +18,17 @@ namespace seal
     {
         template<typename T, typename...>
         struct is_uint64 : std::conditional<
-            std::is_integral<T>::value && 
+            std::is_integral<T>::value &&
             std::is_unsigned<T>::value &&
             (sizeof(T) == sizeof(std::uint64_t)),
-            std::true_type, std::false_type>::type 
+            std::true_type, std::false_type>::type
         {
         };
 
-        template<typename T, typename U, typename... Rest> 
+        template<typename T, typename U, typename... Rest>
         struct is_uint64<T, U, Rest...> : std::conditional<
-            is_uint64<T>::value && 
-            is_uint64<U, Rest...>::value, 
+            is_uint64<T>::value &&
+            is_uint64<U, Rest...>::value,
             std::true_type, std::false_type>::type
         {
         };
@@ -36,7 +36,27 @@ namespace seal
         template<typename T, typename... Rest>
         constexpr bool is_uint64_v = is_uint64<T, Rest...>::value;
 
-        template<typename T, typename S, 
+        template<typename T, typename...>
+        struct is_uint32 : std::conditional<
+            std::is_integral<T>::value &&
+            std::is_unsigned<T>::value &&
+            (sizeof(T) == sizeof(std::uint32_t)),
+            std::true_type, std::false_type>::type
+        {
+        };
+
+        template<typename T, typename U, typename... Rest>
+        struct is_uint32<T, U, Rest...> : std::conditional<
+            is_uint32<T>::value &&
+            is_uint32<U, Rest...>::value,
+            std::true_type, std::false_type>::type
+        {
+        };
+
+        template<typename T, typename... Rest>
+        constexpr bool is_uint32_v = is_uint32<T, Rest...>::value;
+
+        template<typename T, typename S,
             typename = std::enable_if_t<std::is_integral<T>::value>,
             typename = std::enable_if_t<std::is_integral<S>::value>>
         inline constexpr bool unsigned_lt(T in1, S in2) noexcept
@@ -44,7 +64,7 @@ namespace seal
             return static_cast<std::uint64_t>(in1) < static_cast<std::uint64_t>(in2);
         }
 
-        template<typename T, typename S, 
+        template<typename T, typename S,
             typename = std::enable_if_t<std::is_integral<T>::value>,
             typename = std::enable_if_t<std::is_integral<S>::value>>
         inline constexpr bool unsigned_leq(T in1, S in2) noexcept
@@ -52,7 +72,7 @@ namespace seal
             return static_cast<std::uint64_t>(in1) <= static_cast<std::uint64_t>(in2);
         }
 
-        template<typename T, typename S, 
+        template<typename T, typename S,
             typename = std::enable_if_t<std::is_integral<T>::value>,
             typename = std::enable_if_t<std::is_integral<S>::value>>
         inline constexpr bool unsigned_gt(T in1, S in2) noexcept
@@ -60,7 +80,7 @@ namespace seal
             return static_cast<std::uint64_t>(in1) > static_cast<std::uint64_t>(in2);
         }
 
-        template<typename T, typename S, 
+        template<typename T, typename S,
             typename = std::enable_if_t<std::is_integral<T>::value>,
             typename = std::enable_if_t<std::is_integral<S>::value>>
         inline constexpr bool unsigned_geq(T in1, S in2) noexcept
@@ -68,7 +88,7 @@ namespace seal
             return static_cast<std::uint64_t>(in1) >= static_cast<std::uint64_t>(in2);
         }
 
-        template<typename T, typename S, 
+        template<typename T, typename S,
             typename = std::enable_if_t<std::is_integral<T>::value>,
             typename = std::enable_if_t<std::is_integral<S>::value>>
         inline constexpr bool unsigned_eq(T in1, S in2) noexcept
@@ -76,7 +96,7 @@ namespace seal
             return static_cast<std::uint64_t>(in1) == static_cast<std::uint64_t>(in2);
         }
 
-        template<typename T, typename S, 
+        template<typename T, typename S,
             typename = std::enable_if_t<std::is_integral<T>::value>,
             typename = std::enable_if_t<std::is_integral<S>::value>>
         inline constexpr bool unsigned_neq(T in1, S in2) noexcept
@@ -84,14 +104,14 @@ namespace seal
             return static_cast<std::uint64_t>(in1) != static_cast<std::uint64_t>(in2);
         }
 
-        template<typename T, 
+        template<typename T,
             typename = std::enable_if_t<std::is_integral<T>::value>>
         inline constexpr T mul_safe(T in1) noexcept
         {
             return in1;
         }
 
-        template<typename T, 
+        template<typename T,
             typename = std::enable_if_t<std::is_integral<T>::value>>
         inline constexpr T mul_safe(T in1, T in2)
         {
@@ -104,7 +124,7 @@ namespace seal
             }
             else
             {
-                // Positive inputs 
+                // Positive inputs
                 if ((in1 > 0) && (in2 > 0) &&
                     (in2 > std::numeric_limits<T>::max() / in1))
                 {
@@ -139,21 +159,21 @@ namespace seal
             return in1 * in2;
         }
 
-        template<typename T, typename... Args, 
+        template<typename T, typename... Args,
             typename = std::enable_if_t<std::is_integral<T>::value>>
         inline constexpr T mul_safe(T in1, T in2, Args &&...args)
         {
             return mul_safe(mul_safe(in1, in2), mul_safe(std::forward<Args>(args)...));
         }
 
-        template<typename T, 
+        template<typename T,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>>
         inline constexpr T add_safe(T in1) noexcept
         {
             return in1;
         }
 
-        template<typename T, 
+        template<typename T,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>>
         inline constexpr T add_safe(T in1, T in2)
         {
@@ -172,7 +192,7 @@ namespace seal
                 {
                     throw std::out_of_range("signed overflow");
                 }
-                else if (in1 < 0 && 
+                else if (in1 < 0 &&
                     (in2 < std::numeric_limits<T>::min() - in1))
                 {
                     throw std::out_of_range("signed underflow");
@@ -181,14 +201,14 @@ namespace seal
             }
         }
 
-        template<typename T, typename... Args, 
+        template<typename T, typename... Args,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>>
         inline constexpr T add_safe(T in1, T in2, Args &&...args)
         {
             return add_safe(add_safe(in1, in2), add_safe(std::forward<Args>(args)...));
         }
 
-        template<typename T, 
+        template<typename T,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>>
         inline T sub_safe(T in1, T in2)
         {
@@ -207,7 +227,7 @@ namespace seal
                 {
                     throw std::out_of_range("signed underflow");
                 }
-                else if (in1 > 0 && 
+                else if (in1 > 0 &&
                     (in2 < std::numeric_limits<T>::min() + in1))
                 {
                     throw std::out_of_range("signed overflow");
@@ -216,7 +236,7 @@ namespace seal
             }
         }
 
-        template<typename T, typename S, 
+        template<typename T, typename S,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>,
             typename = std::enable_if_t<std::is_arithmetic<S>::value>>
         inline constexpr bool fits_in(S value SEAL_MAYBE_UNUSED) noexcept
@@ -246,7 +266,7 @@ namespace seal
                         return value >= 0;
                     }
                 }
-                else SEAL_IF_CONSTEXPR (std::is_floating_point<T>::value 
+                else SEAL_IF_CONSTEXPR (std::is_floating_point<T>::value
                     && std::is_floating_point<S>::value)
                 {
                     // Both floating-point
@@ -292,35 +312,35 @@ namespace seal
             }
         }
 
-        template<typename T, typename... Args, 
+        template<typename T, typename... Args,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>>
         inline constexpr bool sum_fits_in(Args &&...args)
         {
             return fits_in<T>(add_safe(std::forward<Args>(args)...));
         }
 
-        template<typename T, typename... Args, 
+        template<typename T, typename... Args,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>>
         inline constexpr bool sum_fits_in(T in1, Args &&...args)
         {
             return fits_in<T>(add_safe(in1, std::forward<Args>(args)...));
         }
 
-        template<typename T, typename... Args, 
+        template<typename T, typename... Args,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>>
         inline constexpr bool product_fits_in(Args &&...args)
         {
             return fits_in<T>(mul_safe(std::forward<Args>(args)...));
         }
 
-        template<typename T, typename... Args, 
+        template<typename T, typename... Args,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>>
         inline constexpr bool product_fits_in(T in1, Args &&...args)
         {
             return fits_in<T>(mul_safe(in1, std::forward<Args>(args)...));
         }
 
-        template<typename T, typename S, 
+        template<typename T, typename S,
             typename = std::enable_if_t<std::is_arithmetic<T>::value>,
             typename = std::enable_if_t<std::is_arithmetic<S>::value>>
         inline T safe_cast(S value)
@@ -355,46 +375,36 @@ namespace seal
 
         constexpr std::uint64_t uint64_high_bit = std::uint64_t(1) << (bits_per_uint64 - 1);
 
-        inline constexpr std::uint32_t reverse_bits(std::uint32_t operand) noexcept
-        {
-            operand = (((operand & 0xaaaaaaaa) >> 1) | ((operand & 0x55555555) << 1));
-            operand = (((operand & 0xcccccccc) >> 2) | ((operand & 0x33333333) << 2));
-            operand = (((operand & 0xf0f0f0f0) >> 4) | ((operand & 0x0f0f0f0f) << 4));
-            operand = (((operand & 0xff00ff00) >> 8) | ((operand & 0x00ff00ff) << 8));
-            return((operand >> 16) | (operand << 16));
-        }
-
-        template<typename T, typename = std::enable_if<is_uint64_v<T>>>
+        template<typename T, typename = std::enable_if_t<is_uint32_v<T> || is_uint64_v<T>>>
         inline constexpr T reverse_bits(T operand) noexcept
         {
-            return static_cast<T>(reverse_bits(static_cast<std::uint32_t>(operand >> 32))) |
-                (static_cast<T>(reverse_bits(static_cast<std::uint32_t>(operand & T(0xFFFFFFFF)))) << 32);
-        }
-
-        inline std::uint32_t reverse_bits(std::uint32_t operand, int bit_count)
-        {
-#ifdef SEAL_DEBUG
-            if (bit_count < 0 || bit_count > 32)
+            SEAL_IF_CONSTEXPR (is_uint32_v<T>)
             {
-                throw std::invalid_argument("bit_count");
+                operand = (((operand & T(0xaaaaaaaa)) >> 1) | ((operand & T(0x55555555)) << 1));
+                operand = (((operand & T(0xcccccccc)) >> 2) | ((operand & T(0x33333333)) << 2));
+                operand = (((operand & T(0xf0f0f0f0)) >> 4) | ((operand & T(0x0f0f0f0f)) << 4));
+                operand = (((operand & T(0xff00ff00)) >> 8) | ((operand & T(0x00ff00ff)) << 8));
+                return static_cast<T>(operand >> 16) | static_cast<T>(operand << 16);
             }
-#endif
-            // We need shift by 32 to return zero so convert to uint64_t in-between
-            return static_cast<std::uint32_t>(
-                (static_cast<std::uint64_t>(reverse_bits(operand)) >> (32 - bit_count)));
+            else SEAL_IF_CONSTEXPR (is_uint64_v<T>)
+            {
+                return static_cast<T>(reverse_bits(static_cast<std::uint32_t>(operand >> 32))) |
+                    (static_cast<T>(reverse_bits(static_cast<std::uint32_t>(operand & T(0xFFFFFFFF)))) << 32);
+            }
         }
 
-        template<typename T, typename = std::enable_if<is_uint64_v<T>>>
+        template<typename T, typename = std::enable_if_t<is_uint32_v<T> || is_uint64_v<T>>>
         inline T reverse_bits(T operand, int bit_count)
         {
 #ifdef SEAL_DEBUG
-            if (bit_count < 0 || bit_count > 64)
+            if (bit_count < 0 || bit_count > sizeof(T) * bits_per_byte)
             {
                 throw std::invalid_argument("bit_count");
             }
 #endif
-            // Need return zero on shift by 64
-            return (bit_count == 0) ? 0 : (reverse_bits(operand) >> (64 - bit_count));
+            // Just return zero if bit_count is zero
+            return (bit_count == 0) ? T(0) :
+                reverse_bits(operand) >> (sizeof(T) * bits_per_byte - bit_count);
         }
 
         inline void get_msb_index_generic(unsigned long *result, std::uint64_t value)
@@ -501,7 +511,7 @@ namespace seal
             return reinterpret_cast<SEAL_BYTE*>(value) + byte_index;
         }
 
-        inline const SEAL_BYTE *get_uint64_byte(const std::uint64_t *value, std::size_t byte_index) 
+        inline const SEAL_BYTE *get_uint64_byte(const std::uint64_t *value, std::size_t byte_index)
         {
 #ifdef SEAL_DEBUG
             if (value == nullptr)
@@ -553,21 +563,22 @@ namespace seal
 #endif
             return (add_safe(value, divisor - 1)) / divisor;
         }
-        
+
         template<typename T>
         constexpr double epsilon = std::numeric_limits<T>::epsilon();
 
         template<typename T,
             typename = std::enable_if_t<std::is_floating_point<T>::value>>
-        constexpr bool are_close(T value1, T value2) noexcept
+        inline bool are_close(T value1, T value2) noexcept
         {
-            double scale_factor = std::max<T>({ std::fabs(value1), std::fabs(value2), T{ 1.0 } });
+            double scale_factor = std::max<T>(
+                { std::fabs(value1), std::fabs(value2), T{ 1.0 } });
             return std::fabs(value1 - value2) < epsilon<T> * scale_factor;
         }
 
-        template<typename T, 
+        template<typename T,
             typename = std::enable_if_t<std::is_integral<T>::value>>
-        constexpr bool is_zero(T value) noexcept
+        inline constexpr bool is_zero(T value) noexcept
         {
             return value == T{ 0 };
         }

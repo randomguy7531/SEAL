@@ -7,7 +7,7 @@
 #include "seal/evaluator.h"
 #include "seal/context.h"
 #include "seal/memorymanager.h"
-#include "seal/defaultparams.h"
+#include "seal/modulus.h"
 #include "seal/ckks.h"
 
 using namespace seal;
@@ -22,6 +22,7 @@ namespace SEALTest
         ASSERT_EQ(2ULL, plain.capacity());
         ASSERT_EQ(2ULL, plain.coeff_count());
         ASSERT_EQ(0ULL, plain.significant_coeff_count());
+        ASSERT_EQ(0ULL, plain.nonzero_coeff_count());
         ASSERT_FALSE(plain.is_ntt_form());
 
         plain[0] = 1;
@@ -31,6 +32,7 @@ namespace SEALTest
         ASSERT_EQ(10ULL, plain.capacity());
         ASSERT_EQ(2ULL, plain.coeff_count());
         ASSERT_EQ(2ULL, plain.significant_coeff_count());
+        ASSERT_EQ(2ULL, plain.nonzero_coeff_count());
         ASSERT_EQ(1ULL, plain[0]);
         ASSERT_EQ(2ULL, plain[1]);
         ASSERT_FALSE(plain.is_ntt_form());
@@ -39,6 +41,7 @@ namespace SEALTest
         ASSERT_EQ(10ULL, plain.capacity());
         ASSERT_EQ(5ULL, plain.coeff_count());
         ASSERT_EQ(2ULL, plain.significant_coeff_count());
+        ASSERT_EQ(2ULL, plain.nonzero_coeff_count());
         ASSERT_EQ(1ULL, plain[0]);
         ASSERT_EQ(2ULL, plain[1]);
         ASSERT_EQ(0ULL, plain[2]);
@@ -51,12 +54,14 @@ namespace SEALTest
         ASSERT_EQ(15ULL, plain2.capacity());
         ASSERT_EQ(15ULL, plain2.coeff_count());
         ASSERT_EQ(0ULL, plain2.significant_coeff_count());
+        ASSERT_EQ(0ULL, plain2.nonzero_coeff_count());
         ASSERT_FALSE(plain.is_ntt_form());
 
         plain2 = plain;
         ASSERT_EQ(15ULL, plain2.capacity());
         ASSERT_EQ(5ULL, plain2.coeff_count());
         ASSERT_EQ(2ULL, plain2.significant_coeff_count());
+        ASSERT_EQ(2ULL, plain2.nonzero_coeff_count());
         ASSERT_EQ(1ULL, plain2[0]);
         ASSERT_EQ(2ULL, plain2[1]);
         ASSERT_EQ(0ULL, plain2[2]);
@@ -115,10 +120,11 @@ namespace SEALTest
         {
             EncryptionParameters parms(scheme_type::BFV);
             parms.set_poly_modulus_degree(64);
-            parms.set_coeff_modulus({ DefaultParams::small_mods_30bit(0), DefaultParams::small_mods_30bit(1) });
+            parms.set_coeff_modulus(CoeffModulus::Create(64, { 30, 30 }));
+
             parms.set_plain_modulus(65537);
-            auto context = SEALContext::Create(parms, false); 
-            
+            auto context = SEALContext::Create(parms, false, sec_level_type::none);
+
             plain.parms_id() = parms_id_zero;
             plain = "1x^63 + 2x^62 + Fx^32 + Ax^9 + 1x^1 + 1";
             plain.save(stream);
@@ -136,10 +142,11 @@ namespace SEALTest
         {
             EncryptionParameters parms(scheme_type::CKKS);
             parms.set_poly_modulus_degree(64);
-            parms.set_coeff_modulus({ DefaultParams::small_mods_30bit(0), DefaultParams::small_mods_30bit(1) });
-            auto context = SEALContext::Create(parms, false); 
+            parms.set_coeff_modulus(CoeffModulus::Create(64, { 30, 30 }));
+
+            auto context = SEALContext::Create(parms, false, sec_level_type::none);
             CKKSEncoder encoder(context);
-           
+
             encoder.encode(vector<double>{ 0.1, 2.3, 34.4 }, pow(2.0, 20), plain);
             ASSERT_TRUE(plain.is_ntt_form());
             plain.save(stream);

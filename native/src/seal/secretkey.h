@@ -7,6 +7,7 @@
 #include "seal/plaintext.h"
 #include "seal/memorymanager.h"
 #include "seal/util/common.h"
+#include "seal/valcheck.h"
 #include <iostream>
 #include <cstdint>
 #include <cstddef>
@@ -19,10 +20,9 @@ namespace seal
     Class to store a secret key.
 
     @par Thread Safety
-    In general, reading from SecretKey is thread-safe as long as no other thread 
-    is concurrently mutating it. This is due to the underlying data structure 
+    In general, reading from SecretKey is thread-safe as long as no other thread
+    is concurrently mutating it. This is due to the underlying data structure
     storing the secret key not being thread-safe.
-
 
     @see KeyGenerator for the class that generates the secret key.
     @see PublicKey for the class that stores the public key.
@@ -40,23 +40,25 @@ namespace seal
         SecretKey() = default;
 
         /**
-        Overwrites the key data by random data and destroys the SecretKey object. 
-        */
-        ~SecretKey() noexcept
-        {
-            // We use a default factory from std::random_device to make sure
-            // randomize_key does not throw.
-            static std::unique_ptr<UniformRandomGeneratorFactory> random_factory(
-                std::make_unique<StandardRandomAdapterFactory<std::random_device>>());
-            randomize_secret(random_factory->create());
-        }
-
-        /**
         Creates a new SecretKey by copying an old one.
 
         @param[in] copy The SecretKey to copy from
         */
-        SecretKey(const SecretKey &copy) = default;
+        SecretKey(const SecretKey &copy)
+        {
+            // Note: sk_ is at this point initialized to use a custom (new)
+            // memory pool with the `clear_on_destruction' property. Now use
+            // Plaintext::operator =(const Plaintext &) to copy over the data.
+            // This is very important to do right, otherwise newly created
+            // SecretKey may use a normal memory pool obtained from
+            // MemoryManager::GetPool() with currently active profile (MMProf).
+            sk_ = copy.sk_;
+        }
+
+        /**
+        Destroys the SecretKey object.
+        */
+        ~SecretKey() = default;
 
         /**
         Creates a new SecretKey by moving an old one.
@@ -72,7 +74,9 @@ namespace seal
         */
         SecretKey &operator =(const SecretKey &assign)
         {
-            sk_ = assign.sk_;
+            Plaintext new_sk(MemoryManager::GetPool(mm_prof_opt::FORCE_NEW, true));
+            new_sk = assign.sk_;
+            std::swap(sk_, new_sk);
             return *this;
         }
 
@@ -100,48 +104,7 @@ namespace seal
         }
 
         /**
-        Check whether the current SecretKey is valid for a given SEALContext. If 
-        the given SEALContext is not set, the encryption parameters are invalid, 
-        or the SecretKey data does not match the SEALContext, this function returns 
-        false. Otherwise, returns true.
-
-        @param[in] context The SEALContext
-        */
-        inline bool is_valid_for(std::shared_ptr<const SEALContext> context) const 
-        {
-            // Check metadata
-            if (!is_metadata_valid_for(context))
-            {
-                return false;
-            }
-
-            // Check the data
-            return sk_.is_valid_for(std::move(context));
-        }
-
-        /**
-        Check whether the current SecretKey is valid for a given SEALContext. If 
-        the given SEALContext is not set, the encryption parameters are invalid, 
-        or the SecretKey data does not match the SEALContext, this function returns 
-        false. Otherwise, returns true. This function only checks the metadata
-        and not the secret key data itself.
-
-        @param[in] context The SEALContext
-        */
-        inline bool is_metadata_valid_for(std::shared_ptr<const SEALContext> context) const 
-        {
-            // Verify parameters
-            if (!context || !context->parameters_set())
-            {
-                return false;
-            }
-            auto parms_id = context->first_parms_id();
-            return sk_.is_metadata_valid_for(std::move(context)) && 
-                sk_.is_ntt_form() && sk_.parms_id() == parms_id;
-        }
-
-        /**
-        Saves the SecretKey to an output stream. The output is in binary format 
+        Saves the SecretKey to an output stream. The output is in binary format
         and not human-readable. The output stream must have the "binary" flag set.
 
         @param[in] stream The stream to save the SecretKey to
@@ -155,7 +118,7 @@ namespace seal
         /**
         Loads a SecretKey from an input stream overwriting the current SecretKey.
         No checking of the validity of the SecretKey data against encryption
-        parameters is performed. This function should not be used unless the 
+        parameters is performed. This function should not be used unless the
         SecretKey comes from a fully trusted source.
 
         @param[in] stream The stream to load the SecretKey from
@@ -163,7 +126,10 @@ namespace seal
         */
         inline void unsafe_load(std::istream &stream)
         {
-            sk_.unsafe_load(stream);
+            // We use a fresh memory pool with `clear_on_destruction' enabled.
+            Plaintext new_sk(MemoryManager::GetPool(mm_prof_opt::FORCE_NEW, true));
+            new_sk.unsafe_load(stream);
+            std::swap(sk_, new_sk);
         }
 
         /**
@@ -181,11 +147,13 @@ namespace seal
         inline void load(std::shared_ptr<SEALContext> context,
             std::istream &stream)
         {
-            unsafe_load(stream);
-            if (!is_valid_for(std::move(context)))
+            SecretKey new_sk;
+            new_sk.unsafe_load(stream);
+            if (!is_valid_for(new_sk, std::move(context)))
             {
                 throw std::invalid_argument("SecretKey data is invalid");
             }
+            std::swap(*this, new_sk);
         }
 
         /**
@@ -217,24 +185,7 @@ namespace seal
         }
 
     private:
-        inline void randomize_secret(
-            std::shared_ptr<UniformRandomGenerator> random) noexcept
-        {
-            std::size_t capacity = sk_.capacity();
-            volatile SEAL_BYTE *data_ptr = reinterpret_cast<SEAL_BYTE*>(sk_.data());
-            while (capacity--)
-            {
-                std::size_t pt_coeff_byte_count = sizeof(Plaintext::pt_coeff_type);
-                while (pt_coeff_byte_count--)
-                {
-                    *data_ptr++ = static_cast<SEAL_BYTE>(random->generate());
-                }
-            }
-        }
-
-        /**
-        We use a fresh memory pool with `clear_on_destruction' enabled
-        */
+        // We use a fresh memory pool with `clear_on_destruction' enabled.
         Plaintext sk_{ MemoryManager::GetPool(mm_prof_opt::FORCE_NEW, true) };
     };
 }

@@ -35,28 +35,14 @@ namespace seal
     public:
         /**
         Creates a IntegerEncoder object. The constructor takes as input a pointer to
-        a SEALContext object which contains the plaintext modulus. 
+        a SEALContext object which contains the plaintext modulus.
 
         @param[in] context The SEALContext
         @throws std::invalid_argument if the context is not set
-        @throws std::invalid_argument if the plain_modulus set in context is not 
+        @throws std::invalid_argument if the plain_modulus set in context is not
         at least 2
         */
         IntegerEncoder(std::shared_ptr<SEALContext> context);
-
-        /**
-        Creates a copy of a IntegerEncoder.
-
-        @param[in] copy The IntegerEncoder to copy from
-        */
-        IntegerEncoder(const IntegerEncoder &copy) = default;
-
-        /**
-        Creates a new IntegerEncoder by moving an old one.
-
-        @param[in] source The IntegerEncoder to move from
-        */
-        IntegerEncoder(IntegerEncoder &&source) = default;
 
         /**
         Destroys the IntegerEncoder.
@@ -83,7 +69,7 @@ namespace seal
         Mathematically this amounts to evaluating the input polynomial at x=2.
 
         @param[in] plain The plaintext to be decoded
-        @throws std::invalid_argument if the output does not fit in std::uint32_t 
+        @throws std::invalid_argument if the output does not fit in std::uint32_t
         */
         std::uint32_t decode_uint32(const Plaintext &plain);
 
@@ -92,7 +78,7 @@ namespace seal
         Mathematically this amounts to evaluating the input polynomial at x=2.
 
         @param[in] plain The plaintext to be decoded
-        @throws std::invalid_argument if the output does not fit in std::uint64_t 
+        @throws std::invalid_argument if the output does not fit in std::uint64_t
         */
         std::uint64_t decode_uint64(const Plaintext &plain);
 
@@ -144,7 +130,7 @@ namespace seal
 
         @param[in] plain The plaintext to be decoded
         @throws std::invalid_argument if plain does not represent a valid plaintext polynomial
-        @throws std::invalid_argument if the output does not fit in std::int32_t 
+        @throws std::invalid_argument if the output does not fit in std::int32_t
         */
         std::int32_t decode_int32(const Plaintext &plain);
 
@@ -154,7 +140,7 @@ namespace seal
 
         @param[in] plain The plaintext to be decoded
         @throws std::invalid_argument if plain does not represent a valid plaintext polynomial
-        @throws std::invalid_argument if the output does not fit in std::int64_t 
+        @throws std::invalid_argument if the output does not fit in std::int64_t
         */
         std::int64_t decode_int64(const Plaintext &plain);
 
@@ -179,7 +165,7 @@ namespace seal
 
         @param[in] value The signed integer to encode
         */
-        Plaintext encode(std::int32_t value) 
+        Plaintext encode(std::int32_t value)
         {
             return encode(static_cast<std::int64_t>(value));
         }
@@ -189,7 +175,7 @@ namespace seal
 
         @param[in] value The unsigned integer to encode
         */
-        Plaintext encode(std::uint32_t value) 
+        Plaintext encode(std::uint32_t value)
         {
             return encode(static_cast<std::uint64_t>(value));
         }
@@ -206,7 +192,7 @@ namespace seal
         @param[in] value The signed integer to encode
         @param[out] destination The plaintext to overwrite with the encoding
         */
-        void encode(std::int32_t value, Plaintext &destination) 
+        void encode(std::int32_t value, Plaintext &destination)
         {
             encode(static_cast<std::int64_t>(value), destination);
         }
@@ -217,7 +203,7 @@ namespace seal
         @param[in] value The unsigned integer to encode
         @param[out] destination The plaintext to overwrite with the encoding
         */
-        void encode(std::uint32_t value, Plaintext &destination) 
+        void encode(std::uint32_t value, Plaintext &destination)
         {
             encode(static_cast<std::uint64_t>(value), destination);
         }
@@ -225,13 +211,17 @@ namespace seal
         /**
         Returns a reference to the plaintext modulus.
         */
-        const SmallModulus &plain_modulus() const 
+        const SmallModulus &plain_modulus() const
         {
-            auto &context_data = *context_->context_data();
+            auto &context_data = *context_->first_context_data();
             return context_data.parms().plain_modulus();
         }
 
     private:
+        IntegerEncoder(const IntegerEncoder &copy) = delete;
+
+        IntegerEncoder(IntegerEncoder &&source) = delete;
+
         IntegerEncoder &operator =(const IntegerEncoder &assign) = delete;
 
         IntegerEncoder &operator =(IntegerEncoder &&assign) = delete;

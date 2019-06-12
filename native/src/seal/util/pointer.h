@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-#pragma once 
+#pragma once
 
 #include "seal/util/defines.h"
 #include "seal/util/common.h"
@@ -26,10 +26,10 @@ namespace seal
             template<typename, typename> friend class ConstPointer;
 
             Pointer() = default;
-            
+
             // Move of the same type
-            Pointer(Pointer<SEAL_BYTE> &&source) noexcept : 
-                data_(source.data_), head_(source.head_), 
+            Pointer(Pointer<SEAL_BYTE> &&source) noexcept :
+                data_(source.data_), head_(source.head_),
                 item_(source.item_), alias_(source.alias_)
             {
                 source.data_ = nullptr;
@@ -144,19 +144,6 @@ namespace seal
                 acquire(other);
             }
 
-            inline void swap_with(Pointer<SEAL_BYTE> &other) noexcept 
-            {
-                std::swap(data_, other.data_);
-                std::swap(head_, other.head_);
-                std::swap(item_, other.item_);
-                std::swap(alias_, other.alias_);
-            }
-
-            inline void swap_with(Pointer<SEAL_BYTE> &&other) noexcept
-            {
-                swap_with(other);
-            }
-            
             ~Pointer() noexcept
             {
                 release();
@@ -182,7 +169,7 @@ namespace seal
 
             Pointer<SEAL_BYTE> &operator =(const Pointer<SEAL_BYTE> &assign) = delete;
 
-            Pointer(SEAL_BYTE *pointer, bool alias) noexcept : 
+            Pointer(SEAL_BYTE *pointer, bool alias) noexcept :
                 data_(pointer), alias_(alias)
             {
             }
@@ -221,10 +208,10 @@ namespace seal
             friend class ConstPointer<T>;
 
             Pointer() = default;
-            
+
             // Move of the same type
-            Pointer(Pointer<T> &&source) noexcept : 
-                data_(source.data_), head_(source.head_), 
+            Pointer(Pointer<T> &&source) noexcept :
+                data_(source.data_), head_(source.head_),
                 item_(source.item_), alias_(source.alias_)
             {
                 source.data_ = nullptr;
@@ -444,19 +431,6 @@ namespace seal
                 acquire(other);
             }
 
-            inline void swap_with(Pointer<T> &other) noexcept 
-            {
-                std::swap(data_, other.data_);
-                std::swap(head_, other.head_);
-                std::swap(item_, other.item_);
-                std::swap(alias_, other.alias_);
-            }
-
-            inline void swap_with(Pointer<T> &&other) noexcept
-            {
-                swap_with(other);
-            }
-            
             ~Pointer() noexcept
             {
                 release();
@@ -482,7 +456,7 @@ namespace seal
 
             Pointer<T> &operator =(const Pointer<T> &assign) = delete;
 
-            Pointer(T *pointer, bool alias) noexcept : 
+            Pointer(T *pointer, bool alias) noexcept :
                 data_(pointer), alias_(alias)
             {
             }
@@ -549,8 +523,8 @@ namespace seal
             ConstPointer() = default;
 
             // Move of the same type
-            ConstPointer(Pointer<SEAL_BYTE> &&source) noexcept : 
-                data_(source.data_), head_(source.head_), 
+            ConstPointer(Pointer<SEAL_BYTE> &&source) noexcept :
+                data_(source.data_), head_(source.head_),
                 item_(source.item_), alias_(source.alias_)
             {
                 source.data_ = nullptr;
@@ -567,8 +541,8 @@ namespace seal
             }
 
             // Move of the same type
-            ConstPointer(ConstPointer<SEAL_BYTE> &&source) noexcept : 
-                data_(source.data_), head_(source.head_), 
+            ConstPointer(ConstPointer<SEAL_BYTE> &&source) noexcept :
+                data_(source.data_), head_(source.head_),
                 item_(source.item_), alias_(source.alias_)
             {
                 source.data_ = nullptr;
@@ -678,23 +652,9 @@ namespace seal
                 other.alias_ = false;
             }
 
-            void acquire(ConstPointer<SEAL_BYTE> &&other) noexcept
+            inline void acquire(ConstPointer<SEAL_BYTE> &&other) noexcept
             {
                 acquire(other);
-            }
-
-            inline void swap_with(ConstPointer<SEAL_BYTE> &other) noexcept
-            {
-                std::swap(data_, other.data_);
-                std::swap(head_, other.head_);
-                std::swap(item_, other.item_);
-                std::swap(alias_, other.alias_);
-            }
-
-
-            inline void swap_with(ConstPointer<SEAL_BYTE> &&other) noexcept
-            {
-                swap_with(other);
             }
 
             ~ConstPointer() noexcept
@@ -724,12 +684,12 @@ namespace seal
 
             ConstPointer &operator =(const ConstPointer<SEAL_BYTE> &assign) = delete;
 
-            ConstPointer(SEAL_BYTE *pointer, bool alias) noexcept : 
+            ConstPointer(SEAL_BYTE *pointer, bool alias) noexcept :
                 data_(pointer), alias_(alias)
             {
             }
 
-            ConstPointer(class MemoryPoolHead *head)            
+            ConstPointer(class MemoryPoolHead *head)
             {
 #ifdef SEAL_DEBUG
                 if (!head)
@@ -751,7 +711,7 @@ namespace seal
             bool alias_ = false;
         };
 
-        template<typename T, typename> 
+        template<typename T, typename>
         class ConstPointer
         {
             friend class MemoryPoolST;
@@ -761,8 +721,8 @@ namespace seal
             ConstPointer() = default;
 
             // Move of the same type
-            ConstPointer(Pointer<T> &&source) noexcept : 
-                data_(source.data_), head_(source.head_), 
+            ConstPointer(Pointer<T> &&source) noexcept :
+                data_(source.data_), head_(source.head_),
                 item_(source.item_), alias_(source.alias_)
             {
                 source.data_ = nullptr;
@@ -832,8 +792,8 @@ namespace seal
             }
 
             // Move of the same type
-            ConstPointer(ConstPointer<T> &&source) noexcept : 
-                data_(source.data_), head_(source.head_), 
+            ConstPointer(ConstPointer<T> &&source) noexcept :
+                data_(source.data_), head_(source.head_),
                 item_(source.item_), alias_(source.alias_)
             {
                 source.data_ = nullptr;
@@ -901,7 +861,7 @@ namespace seal
                 source.item_ = nullptr;
                 source.alias_ = false;
             }
-        
+
             inline auto &operator =(ConstPointer<T> &&assign) noexcept
             {
                 acquire(std::move(assign));
@@ -1095,19 +1055,6 @@ namespace seal
                 acquire(other);
             }
 
-            inline void swap_with(ConstPointer<T> &other) noexcept
-            {
-                std::swap(data_, other.data_);
-                std::swap(head_, other.head_);
-                std::swap(item_, other.item_);
-                std::swap(alias_, other.alias_);
-            }
-
-            inline void swap_with(ConstPointer<T> &&other) noexcept
-            {
-                swap_with(other);
-            }
-
             ~ConstPointer() noexcept
             {
                 release();
@@ -1192,7 +1139,7 @@ namespace seal
         inline auto allocate(MemoryPool &pool, Args &&...args)
         {
             using T = typename std::remove_cv<typename std::remove_reference<T_>::type>::type;
-            return Pointer<T>(pool.get_for_byte_count(sizeof(T)), 
+            return Pointer<T>(pool.get_for_byte_count(sizeof(T)),
                 std::forward<Args>(args)...);
         }
 
@@ -1202,13 +1149,13 @@ namespace seal
         inline auto allocate(std::size_t count, MemoryPool &pool, Args &&...args)
         {
             using T = typename std::remove_cv<typename std::remove_reference<T_>::type>::type;
-            return Pointer<T>(pool.get_for_byte_count(util::mul_safe(count, sizeof(T))), 
+            return Pointer<T>(pool.get_for_byte_count(util::mul_safe(count, sizeof(T))),
                 std::forward<Args>(args)...);
         }
 
-        template<typename T_, 
+        template<typename T_,
             typename = std::enable_if<std::is_standard_layout<T_>::value>>
-        inline auto duplicate_if_needed(T_ *original, std::size_t count, 
+        inline auto duplicate_if_needed(T_ *original, std::size_t count,
             bool condition, MemoryPool &pool)
         {
             using T = typename std::remove_cv<typename std::remove_reference<T_>::type>::type;
@@ -1227,9 +1174,9 @@ namespace seal
             return allocation;
         }
 
-        template<typename T_, 
-            typename = std::enable_if<std::is_standard_layout<T_>::value>> 
-        inline auto duplicate_if_needed(const T_ *original, 
+        template<typename T_,
+            typename = std::enable_if<std::is_standard_layout<T_>::value>>
+        inline auto duplicate_if_needed(const T_ *original,
             std::size_t count, bool condition, MemoryPool &pool)
         {
             using T = typename std::remove_cv<typename std::remove_reference<T_>::type>::type;

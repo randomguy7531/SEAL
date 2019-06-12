@@ -2,8 +2,8 @@
 // Licensed under the MIT license.
 
 // STD
-#include <algorithm>
 #include <iterator>
+#include <algorithm>
 
 // SEALNet
 #include "sealnet/stdafx.h"
@@ -39,23 +39,19 @@ unique_ptr<MemoryPoolHandle> sealnet::MemHandleFromVoid(void *voidptr)
     return make_unique<MemoryPoolHandle>(*handle);
 }
 
-void sealnet::BuildCoeffPointers(const vector<SmallModulus> &coefficients, uint64_t *length, void **coeffs)
+void sealnet::BuildSmallModulusPointers(const vector<SmallModulus> &in_mods, uint64_t *length, void **out_mods)
 {
-    *length = safe_cast<uint64_t>(coefficients.size());
-
-    if (coeffs == nullptr)
+    *length = static_cast<uint64_t>(in_mods.size());
+    if (out_mods == nullptr)
     {
         // The caller is only interested in the size
         return;
     }
 
-    uint64_t count = 0;
-    SmallModulus* *coeff_array = reinterpret_cast<SmallModulus**>(coeffs);
-
-    for (const auto &coeff : coefficients)
-    {
-        coeff_array[count++] = new SmallModulus(coeff);
-    }
+    SmallModulus* *mod_ptr_array = reinterpret_cast<SmallModulus**>(out_mods);
+    transform(in_mods.begin(), in_mods.end(), mod_ptr_array,
+        [](const auto &mod) { return new SmallModulus(mod); }
+    );
 }
 
 const shared_ptr<SEALContext> &sealnet::SharedContextFromVoid(void *context)
@@ -73,22 +69,6 @@ const shared_ptr<SEALContext> &sealnet::SharedContextFromVoid(void *context)
     }
 
     return ctxiter->second;
-}
-
-void sealnet::CopyParmsId(const uint64_t *src, parms_id_type &dest)
-{
-    if (nullptr != src)
-    {
-        copy_n(src, dest.size(), begin(dest));
-    }
-}
-
-void sealnet::CopyParmsId(const parms_id_type &src, uint64_t *dest)
-{
-    if (nullptr != dest)
-    {
-        copy_n(cbegin(src), src.size(), dest);
-    }
 }
 
 HRESULT sealnet::ToStringHelper(const string &str, char *outstr, uint64_t *length)

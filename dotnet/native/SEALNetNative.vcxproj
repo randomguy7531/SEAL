@@ -68,6 +68,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\native\src</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeaderFile>sealnet/stdafx.h</PrecompiledHeaderFile>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -89,6 +90,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\native\src</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PrecompiledHeaderFile>sealnet/stdafx.h</PrecompiledHeaderFile>
+      <AdditionalOptions>/Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -98,13 +100,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="sealnet\modulus_wrapper.h" />
     <ClInclude Include="sealnet\contextdata_wrapper.h" />
     <ClInclude Include="sealnet\batchencoder_wrapper.h" />
     <ClInclude Include="sealnet\biguint_wrapper.h" />
     <ClInclude Include="sealnet\ciphertext_wrapper.h" />
     <ClInclude Include="sealnet\ckksencoder_wrapper.h" />
     <ClInclude Include="sealnet\decryptor_wrapper.h" />
-    <ClInclude Include="sealnet\defaultparams_wrapper.h" />
     <ClInclude Include="sealnet\defines.h" />
     <ClInclude Include="sealnet\intencoder_wrapper.h" />
     <ClInclude Include="sealnet\encryptionparameterqualifiers_wrapper.h" />
@@ -113,6 +115,7 @@
     <ClInclude Include="sealnet\evaluator_wrapper.h" />
     <ClInclude Include="sealnet\galoiskeys_wrapper.h" />
     <ClInclude Include="sealnet\keygenerator_wrapper.h" />
+    <ClInclude Include="sealnet\kswitchkeys_wrapper.h" />
     <ClInclude Include="sealnet\memorymanager_wrapper.h" />
     <ClInclude Include="sealnet\memorypoolhandle_wrapper.h" />
     <ClInclude Include="sealnet\plaintext_wrapper.h" />
@@ -124,14 +127,15 @@
     <ClInclude Include="sealnet\stdafx.h" />
     <ClInclude Include="sealnet\targetver.h" />
     <ClInclude Include="sealnet\utilities.h" />
+    <ClInclude Include="sealnet\valcheck_wrapper.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="sealnet\modulus_wrapper.cpp" />
     <ClCompile Include="sealnet\contextdata_wrapper.cpp" />
     <ClCompile Include="sealnet\batchencoder_wrapper.cpp" />
     <ClCompile Include="sealnet\ciphertext_wrapper.cpp" />
     <ClCompile Include="sealnet\ckksencoder_wrapper.cpp" />
     <ClCompile Include="sealnet\decryptor_wrapper.cpp" />
-    <ClCompile Include="sealnet\defaultparams_wrapper.cpp" />
     <ClCompile Include="sealnet\dllmain.cpp" />
     <ClCompile Include="sealnet\biguint_wrapper.cpp" />
     <ClCompile Include="sealnet\intencoder_wrapper.cpp" />
@@ -140,6 +144,7 @@
     <ClCompile Include="sealnet\evaluator_wrapper.cpp" />
     <ClCompile Include="sealnet\galoiskeys_wrapper.cpp" />
     <ClCompile Include="sealnet\keygenerator_wrapper.cpp" />
+    <ClCompile Include="sealnet\kswitchkeys_wrapper.cpp" />
     <ClCompile Include="sealnet\memorymanager_wrapper.cpp" />
     <ClCompile Include="sealnet\memorypoolhandle_wrapper.cpp" />
     <ClCompile Include="sealnet\plaintext_wrapper.cpp" />
@@ -154,6 +159,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="sealnet\valcheck_wrapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="CMakeLists.txt" />

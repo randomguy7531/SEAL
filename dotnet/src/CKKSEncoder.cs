@@ -39,13 +39,19 @@ namespace Microsoft.Research.SEAL
         /// </summary>
         /// <param name="context">The SEALContext</param>
         /// <exception cref="ArgumentNullException">if context is null</exception>
-        /// <exception cref="ArgumentException">if the context is not set or encryption parameters 
+        /// <exception cref="ArgumentException">if the context is not set or encryption parameters
         /// are not valid</exception>
         /// <exception cref="ArgumentException">if scheme is not SchemeType.CKKS</exception>
         public CKKSEncoder(SEALContext context)
         {
             if (null == context)
                 throw new ArgumentNullException(nameof(context));
+            if (!context.ParametersSet)
+                throw new ArgumentException("Encryption parameters are not set correctly");
+
+            SEALContext.ContextData contextData = context.FirstContextData;
+            if (contextData.Parms.Scheme != SchemeType.CKKS)
+                throw new ArgumentException("Unsupported scheme");
 
             NativeMethods.CKKSEncoder_Create(context.NativePtr, out IntPtr ptr);
             NativePtr = ptr;
@@ -54,23 +60,23 @@ namespace Microsoft.Research.SEAL
         }
 
         /// <summary>
-        /// Encodes double-precision floating-point real numbers into a plaintext 
-        /// polynomial. Dynamic memory allocations in the process are allocated from the 
+        /// Encodes double-precision floating-point real numbers into a plaintext
+        /// polynomial. Dynamic memory allocations in the process are allocated from the
         /// memory pool pointed to by the given MemoryPoolHandle.
         /// </summary>
-        /// <param name="values">The enumeration of double-precision floating-point numbers 
+        /// <param name="values">The enumeration of double-precision floating-point numbers
         /// to encode</param>
-        /// <param name="parmsId">parmsId determining the encryption parameters to be used 
+        /// <param name="parmsId">parmsId determining the encryption parameters to be used
         /// by the result plaintext</param>
         /// <param name="scale">Scaling parameter defining encoding precision</param>
         /// <param name="destination">The plaintext polynomial to overwrite with the result</param>
         /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
         /// <exception cref="ArgumentNullException">if either values, parmsId or destionation are null.</exception>
         /// <exception cref="ArgumentException">if values has invalid size</exception>
-        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption 
+        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption
         /// parameters </exception>
         /// <exception cref="ArgumentException">if scale is not strictly positive</exception>
-        /// <exception cref="ArgumentException">if encoding is too large for the encryption 
+        /// <exception cref="ArgumentException">if encoding is too large for the encryption
         /// parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Encode(IEnumerable<double> values, ParmsId parmsId,
@@ -90,23 +96,23 @@ namespace Microsoft.Research.SEAL
         }
 
         /// <summary>
-        /// Encodes double-precision floating-point complex numbers into a plaintext 
-        /// polynomial. Dynamic memory allocations in the process are allocated from the 
+        /// Encodes double-precision floating-point complex numbers into a plaintext
+        /// polynomial. Dynamic memory allocations in the process are allocated from the
         /// memory pool pointed to by the given MemoryPoolHandle.
         /// </summary>
-        /// <param name="values">The enumeration of double-precision complex numbers 
+        /// <param name="values">The enumeration of double-precision complex numbers
         /// to encode</param>
-        /// <param name="parmsId">parmsId determining the encryption parameters to be used 
+        /// <param name="parmsId">parmsId determining the encryption parameters to be used
         /// by the result plaintext</param>
         /// <param name="scale">Scaling parameter defining encoding precision</param>
         /// <param name="destination">The plaintext polynomial to overwrite with the result</param>
         /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
         /// <exception cref="ArgumentNullException">if either values, parmsId or destionation are null.</exception>
         /// <exception cref="ArgumentException">if values has invalid size</exception>
-        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption 
+        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption
         /// parameters </exception>
         /// <exception cref="ArgumentException">if scale is not strictly positive</exception>
-        /// <exception cref="ArgumentException">if encoding is too large for the encryption 
+        /// <exception cref="ArgumentException">if encoding is too large for the encryption
         /// parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Encode(IEnumerable<Complex> values, ParmsId parmsId,
@@ -135,12 +141,12 @@ namespace Microsoft.Research.SEAL
         }
 
         /// <summary>
-        /// Encodes double-precision floating-point real numbers into 
-        /// a plaintext polynomial. The encryption parameters used are the top level 
-        /// parameters for the given context. Dynamic memory allocations in the process 
+        /// Encodes double-precision floating-point real numbers into
+        /// a plaintext polynomial. The encryption parameters used are the top level
+        /// parameters for the given context. Dynamic memory allocations in the process
         /// are allocated from the memory pool pointed to by the given MemoryPoolHandle.
         /// </summary>
-        /// <param name="values">The enumeration of double-precision floating-point numbers 
+        /// <param name="values">The enumeration of double-precision floating-point numbers
         /// to encode</param>
         /// <param name="scale">Scaling parameter defining encoding precision</param>
         /// <param name="destination">The plaintext polynomial to overwrite with the result</param>
@@ -148,27 +154,22 @@ namespace Microsoft.Research.SEAL
         /// <exception cref="ArgumentNullException">if either values or destionation are null.</exception>
         /// <exception cref="ArgumentException">if values has invalid size</exception>
         /// <exception cref="ArgumentException">if scale is not strictly positive</exception>
-        /// <exception cref="ArgumentException">if encoding is too large for the encryption 
+        /// <exception cref="ArgumentException">if encoding is too large for the encryption
         /// parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Encode(IEnumerable<double> values, double scale,
             Plaintext destination, MemoryPoolHandle pool = null)
         {
-            if (null == values)
-                throw new ArgumentNullException(nameof(values));
-            if (null == destination)
-                throw new ArgumentNullException(nameof(destination));
-
             Encode(values, context_.FirstParmsId, scale, destination, pool);
         }
 
         /// <summary>
-        /// Encodes double-precision floating-point complex numbers into 
-        /// a plaintext polynomial. The encryption parameters used are the top level 
-        /// parameters for the given context. Dynamic memory allocations in the process 
+        /// Encodes double-precision floating-point complex numbers into
+        /// a plaintext polynomial. The encryption parameters used are the top level
+        /// parameters for the given context. Dynamic memory allocations in the process
         /// are allocated from the memory pool pointed to by the given MemoryPoolHandle.
         /// </summary>
-        /// <param name="values">The enumeration of double-precision floating-point numbers 
+        /// <param name="values">The enumeration of double-precision floating-point numbers
         /// to encode</param>
         /// <param name="scale">Scaling parameter defining encoding precision</param>
         /// <param name="destination">The plaintext polynomial to overwrite with the result</param>
@@ -176,36 +177,31 @@ namespace Microsoft.Research.SEAL
         /// <exception cref="ArgumentNullException">if either values or destionation are null.</exception>
         /// <exception cref="ArgumentException">if values has invalid size</exception>
         /// <exception cref="ArgumentException">if scale is not strictly positive</exception>
-        /// <exception cref="ArgumentException">if encoding is too large for the encryption 
+        /// <exception cref="ArgumentException">if encoding is too large for the encryption
         /// parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Encode(IEnumerable<Complex> values, double scale,
             Plaintext destination, MemoryPoolHandle pool = null)
         {
-            if (null == values)
-                throw new ArgumentNullException(nameof(values));
-            if (null == destination)
-                throw new ArgumentNullException(nameof(destination));
-
             Encode(values, context_.FirstParmsId, scale, destination, pool);
         }
 
         /// <summary>
-        /// Encodes a double-precision floating-point number into a plaintext polynomial. 
-        /// Dynamic memory allocations in the process are allocated from the memory pool 
+        /// Encodes a double-precision floating-point number into a plaintext polynomial.
+        /// Dynamic memory allocations in the process are allocated from the memory pool
         /// pointed to by the given MemoryPoolHandle.
         /// </summary>
         /// <param name="value">The double-precision floating-point number to encode</param>
-        /// <param name="parmsId">parmsId determining the encryption parameters to be used 
+        /// <param name="parmsId">parmsId determining the encryption parameters to be used
         /// by the result plaintext</param>
         /// <param name="scale">Scaling parameter defining encoding precision</param>
         /// <param name="destination">The plaintext polynomial to overwrite with the result</param>
         /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
         /// <exception cref="ArgumentNullException">if either parmsId or destination are null</exception>
-        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption 
+        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption
         /// parameters </exception>
         /// <exception cref="ArgumentException">if scale is not strictly positive</exception>
-        /// <exception cref="ArgumentException">if encoding is too large for the encryption 
+        /// <exception cref="ArgumentException">if encoding is too large for the encryption
         /// parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Encode(double value, ParmsId parmsId,
@@ -218,12 +214,11 @@ namespace Microsoft.Research.SEAL
                 throw new ArgumentNullException(nameof(destination));
 
             IntPtr poolPtr = pool?.NativePtr ?? IntPtr.Zero;
-
             NativeMethods.CKKSEncoder_Encode(NativePtr, value, parmsId.Block, scale, destination.NativePtr, poolPtr);
         }
 
         /// <summary>
-        /// Encodes a double-precision floating-point number into a plaintext polynomial. 
+        /// Encodes a double-precision floating-point number into a plaintext polynomial.
         /// The encryption parameters used are the top level parameters for the given context.
         /// Dynamic memory allocations in the process are allocated from the memory pool
         /// pointed to by the given MemoryPoolHandle.
@@ -234,34 +229,31 @@ namespace Microsoft.Research.SEAL
         /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
         /// <exception cref="ArgumentNullException">if destination is null</exception>
         /// <exception cref="ArgumentException">if scale is not strictly positive</exception>
-        /// <exception cref="ArgumentException">if encoding is too large for the encryption 
+        /// <exception cref="ArgumentException">if encoding is too large for the encryption
         /// parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Encode(double value, double scale, Plaintext destination,
             MemoryPoolHandle pool = null)
         {
-            if (null == destination)
-                throw new ArgumentNullException(nameof(destination));
-
             Encode(value, context_.FirstParmsId, scale, destination, pool);
         }
 
         /// <summary>
-        /// Encodes a double-precision complex number into a plaintext polynomial. Dynamic 
-        /// memory allocations in the process are allocated from the memory pool pointed to 
+        /// Encodes a double-precision complex number into a plaintext polynomial. Dynamic
+        /// memory allocations in the process are allocated from the memory pool pointed to
         /// by the given MemoryPoolHandle.
         /// </summary>
         /// <param name="value">The double-precision complex number to encode</param>
-        /// <param name="parmsId">parmsId determining the encryption parameters to be used 
+        /// <param name="parmsId">parmsId determining the encryption parameters to be used
         /// by the result plaintext</param>
         /// <param name="scale">Scaling parameter defining encoding precision</param>
         /// <param name="destination">The plaintext polynomial to overwrite with the result</param>
         /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
         /// <exception cref="ArgumentNullException">if either parmsId or destination are null</exception>
-        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption 
+        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption
         /// parameters </exception>
         /// <exception cref="ArgumentException">if scale is not strictly positive</exception>
-        /// <exception cref="ArgumentException">if encoding is too large for the encryption 
+        /// <exception cref="ArgumentException">if encoding is too large for the encryption
         /// parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Encode(Complex value, ParmsId parmsId, double scale,
@@ -273,14 +265,13 @@ namespace Microsoft.Research.SEAL
                 throw new ArgumentNullException(nameof(destination));
 
             IntPtr poolPtr = pool?.NativePtr ?? IntPtr.Zero;
-
             NativeMethods.CKKSEncoder_Encode(NativePtr, value.Real, value.Imaginary, parmsId.Block, scale, destination.NativePtr, poolPtr);
         }
 
         /// <summary>
-        /// Encodes a double-precision complex number into a plaintext polynomial. The 
-        /// encryption parameters used are the top level parameters for the given context. 
-        /// Dynamic memory allocations in the process are allocated from the memory pool 
+        /// Encodes a double-precision complex number into a plaintext polynomial. The
+        /// encryption parameters used are the top level parameters for the given context.
+        /// Dynamic memory allocations in the process are allocated from the memory pool
         /// pointed to by the given MemoryPoolHandle.
         /// </summary>
         /// <param name="value">The double-precision complex number to encode</param>
@@ -289,15 +280,12 @@ namespace Microsoft.Research.SEAL
         /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
         /// <exception cref="ArgumentNullException">if destination is null</exception>
         /// <exception cref="ArgumentException">if scale is not strictly positive</exception>
-        /// <exception cref="ArgumentException">if encoding is too large for the encryption 
+        /// <exception cref="ArgumentException">if encoding is too large for the encryption
         /// parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Encode(Complex value, double scale, Plaintext destination,
             MemoryPoolHandle pool = null)
         {
-            if (null == destination)
-                throw new ArgumentNullException(nameof(destination));
-
             Encode(value, context_.FirstParmsId, scale, destination, pool);
         }
 
@@ -305,11 +293,11 @@ namespace Microsoft.Research.SEAL
         /// Encodes an integer number into a plaintext polynomial without any scaling.
         /// </summary>
         /// <param name="value">The integer number to encode</param>
-        /// <param name="parmsId">parmsId determining the encryption parameters to be used 
+        /// <param name="parmsId">parmsId determining the encryption parameters to be used
         /// by the result plaintext</param>
         /// <param name="destination">The plaintext polynomial to overwrite with the result</param>
         /// <exception cref="ArgumentNullException">if either parmsId or destionation are null</exception>
-        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption 
+        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption
         /// parameters </exception>
         public void Encode(long value, ParmsId parmsId, Plaintext destination)
         {
@@ -322,7 +310,7 @@ namespace Microsoft.Research.SEAL
         }
 
         /// <summary>
-        /// Encodes an integer number into a plaintext polynomial without any scaling. The 
+        /// Encodes an integer number into a plaintext polynomial without any scaling. The
         /// encryption parameters used are the top level parameters for the given context.
         /// </summary>
         /// <param name="value">The integer number to encode</param>
@@ -330,22 +318,19 @@ namespace Microsoft.Research.SEAL
         /// <exception cref="ArgumentNullException">if destination is null</exception>
         public void Encode(long value, Plaintext destination)
         {
-            if (null == destination)
-                throw new ArgumentNullException(nameof(destination));
-
             Encode(value, context_.FirstParmsId, destination);
         }
 
         /// <summary>
-        /// Decodes a plaintext polynomial into double-precision floating-point real 
-        /// numbers. Dynamic memory allocations in the process are allocated from 
+        /// Decodes a plaintext polynomial into double-precision floating-point real
+        /// numbers. Dynamic memory allocations in the process are allocated from
         /// the memory pool pointed to by the given MemoryPoolHandle.
         /// </summary>
         /// <param name="plain">plain The plaintext to decode</param>
         /// <param name="destination">The collection to be overwritten with the values in the slots</param>
         /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
         /// <exception cref="ArgumentNullException">if either plain or destination are null</exception>
-        /// <exception cref="ArgumentException">if plain is not in NTT form or is invalid for the 
+        /// <exception cref="ArgumentException">if plain is not in NTT form or is invalid for the
         /// encryption parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Decode(Plaintext plain, ICollection<double> destination,
@@ -376,14 +361,14 @@ namespace Microsoft.Research.SEAL
 
         /// <summary>
         /// Decodes a plaintext polynomial into double-precision floating-point complex
-        /// numbers. Dynamic memory allocations in the process are allocated from 
+        /// numbers. Dynamic memory allocations in the process are allocated from
         /// the memory pool pointed to by the given MemoryPoolHandle.
         /// </summary>
         /// <param name="plain">plain The plaintext to decode</param>
         /// <param name="destination">The collection to be overwritten with the values in the slots</param>
         /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
         /// <exception cref="ArgumentNullException">if either plain or destination are null</exception>
-        /// <exception cref="ArgumentException">if plain is not in NTT form or is invalid for the 
+        /// <exception cref="ArgumentException">if plain is not in NTT form or is invalid for the
         /// encryption parameters</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
         public void Decode(Plaintext plain, ICollection<Complex> destination,

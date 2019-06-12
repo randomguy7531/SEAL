@@ -61,6 +61,16 @@ SEALNETNATIVE HRESULT SEALCALL SmallModulus_IsZero(void *thisptr, bool *is_zero)
     return S_OK;
 }
 
+SEALNETNATIVE HRESULT SEALCALL SmallModulus_IsPrime(void *thisptr, bool *is_prime)
+{
+    SmallModulus *sm = FromVoid<SmallModulus>(thisptr);
+    IfNullRet(sm, E_POINTER);
+    IfNullRet(is_prime, E_POINTER);
+
+    *is_prime = sm->is_prime();
+    return S_OK;
+}
+
 SEALNETNATIVE HRESULT SEALCALL SmallModulus_Value(void *thisptr, uint64_t *value)
 {
     SmallModulus *sm = FromVoid<SmallModulus>(thisptr);

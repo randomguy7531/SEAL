@@ -118,7 +118,7 @@ namespace seal
             }
 
             // Determine bit length of coefficient.
-            int coeff_bit_count = 
+            int coeff_bit_count =
                 get_hex_string_bit_count(hex_poly_ptr + pos, coeff_length);
             if (coeff_bit_count > assign_coeff_bit_count)
             {
@@ -203,95 +203,6 @@ namespace seal
         return *this;
     }
 
-    bool Plaintext::is_valid_for(shared_ptr<const SEALContext> context) const
-    {
-        // Check metadata
-        if (!is_metadata_valid_for(context))
-        {
-            return false;
-        }
-
-        // Check the data
-        if (is_ntt_form())
-        {
-            auto context_data_ptr = context->context_data(parms_id_);
-            auto &parms = context_data_ptr->parms();
-            auto &coeff_modulus = parms.coeff_modulus();
-            size_t coeff_mod_count = coeff_modulus.size();
-            size_t poly_modulus_degree = parms.poly_modulus_degree();
-
-            const pt_coeff_type *ptr = data();
-            for (size_t j = 0; j < coeff_mod_count; j++)
-            {
-                uint64_t modulus = coeff_modulus[j].value();
-                for (size_t k = 0; k < poly_modulus_degree; k++, ptr++)
-                {
-                    if (*ptr >= modulus)
-                    {
-                        return false;
-                    }
-                }
-            }
-        }
-        else
-        {
-            auto &parms = context->context_data()->parms();
-            uint64_t modulus = parms.plain_modulus().value(); 
-            const pt_coeff_type *ptr = data();
-            for (size_t k = 0; k < data_.size(); k++, ptr++)
-            {
-                if (*ptr >= modulus)
-                {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    bool Plaintext::is_metadata_valid_for(shared_ptr<const SEALContext> context) const
-    {
-        // Verify parameters
-        if (!context || !context->parameters_set())
-        {
-            return false;
-        }
-
-        if (is_ntt_form())
-        {
-            auto context_data_ptr = context->context_data(parms_id_);
-            if (!context_data_ptr)
-            {
-                return false;
-            }
-
-            auto &parms = context_data_ptr->parms();
-            auto &coeff_modulus = parms.coeff_modulus();
-            size_t poly_modulus_degree = parms.poly_modulus_degree();
-            if (mul_safe(coeff_modulus.size(), poly_modulus_degree) != data_.size())
-            {
-                return false;
-            }
-        }
-        else
-        {
-            auto &parms = context->context_data()->parms();
-            if (parms.scheme() != scheme_type::BFV)
-            {
-                return false;
-            }
-
-            size_t poly_modulus_degree = parms.poly_modulus_degree();
-            if (data_.size() > poly_modulus_degree)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     void Plaintext::save(ostream &stream) const
     {
         auto old_except_mask = stream.exceptions();
@@ -315,6 +226,8 @@ namespace seal
 
     void Plaintext::unsafe_load(istream &stream)
     {
+        Plaintext new_data(data_.pool());
+
         auto old_except_mask = stream.exceptions();
         try
         {
@@ -328,24 +241,21 @@ namespace seal
             stream.read(reinterpret_cast<char*>(&scale), sizeof(double));
 
             // Load the data
-            IntArray<pt_coeff_type> new_data(data_.pool());
-            new_data.load(stream);
+            new_data.data_.load(stream);
 
             // Set the parms_id
-            parms_id_ = parms_id;
+            new_data.parms_id_ = parms_id;
 
             // Set the scale
-            scale_ = scale;
-
-            // Set the data
-            data_.swap_with(new_data);
+            new_data.scale_ = scale;
         }
         catch (const exception &)
         {
             stream.exceptions(old_except_mask);
             throw;
         }
-
         stream.exceptions(old_except_mask);
+
+        swap(*this, new_data);
     }
 }

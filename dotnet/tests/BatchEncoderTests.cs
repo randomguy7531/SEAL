@@ -16,12 +16,12 @@ namespace SEALNetTest
         {
             EncryptionParameters parms = new EncryptionParameters(SchemeType.BFV);
             parms.PolyModulusDegree = 64;
-            List<SmallModulus> coeffModulus = new List<SmallModulus>();
-            coeffModulus.Add(DefaultParams.SmallMods60Bit(0));
-            parms.CoeffModulus = coeffModulus;
+            parms.CoeffModulus = CoeffModulus.Create(64, new int[]{ 60 });
             parms.PlainModulus = new SmallModulus(257);
 
-            SEALContext context = SEALContext.Create(parms);
+            SEALContext context = new SEALContext(parms,
+                expandModChain: false,
+                secLevel: SecLevelType.None);
 
             BatchEncoder encoder = new BatchEncoder(context);
 
@@ -41,12 +41,12 @@ namespace SEALNetTest
 
             for (ulong i = 0; i < encoder.SlotCount; i++)
             {
-                Assert.AreEqual(plainList[(int)i], plainList2[(int)i]);
+                Assert.AreEqual(plainList[checked((int)i)], plainList2[checked((int)i)]);
             }
 
             for (ulong i = 0; i < encoder.SlotCount; i++)
             {
-                plainList[(int)i] = 5;
+                plainList[checked((int)i)] = 5;
             }
 
             encoder.Encode(plainList, plain);
@@ -56,13 +56,13 @@ namespace SEALNetTest
 
             for (ulong i = 0; i < encoder.SlotCount; i++)
             {
-                Assert.AreEqual(plainList[(int)i], plainList2[(int)i]);
+                Assert.AreEqual(plainList[checked((int)i)], plainList2[checked((int)i)]);
             }
 
             List<ulong> shortList = new List<ulong>();
-            for (int i = 0; i < 20; i++)
+            for (ulong i = 0; i < 20; i++)
             {
-                shortList.Add((ulong)i);
+                shortList.Add(i);
             }
 
             encoder.Encode(shortList, plain);
@@ -80,7 +80,7 @@ namespace SEALNetTest
 
             for (ulong i = 20; i < encoder.SlotCount; i++)
             {
-                Assert.AreEqual(0ul, shortList2[(int)i]);
+                Assert.AreEqual(0ul, shortList2[checked((int)i)]);
             }
         }
 
@@ -89,12 +89,12 @@ namespace SEALNetTest
         {
             EncryptionParameters parms = new EncryptionParameters(SchemeType.BFV);
             parms.PolyModulusDegree = 64;
-            List<SmallModulus> coeffModulus = new List<SmallModulus>();
-            coeffModulus.Add(DefaultParams.SmallMods60Bit(0));
-            parms.CoeffModulus = coeffModulus;
+            parms.CoeffModulus = CoeffModulus.Create(64, new int[] { 60 });
             parms.PlainModulus = new SmallModulus(257);
 
-            SEALContext context = SEALContext.Create(parms);
+            SEALContext context = new SEALContext(parms,
+                expandModChain: false,
+                secLevel: SecLevelType.None);
 
             BatchEncoder encoder = new BatchEncoder(context);
 
@@ -114,12 +114,12 @@ namespace SEALNetTest
 
             for (ulong i = 0; i < encoder.SlotCount; i++)
             {
-                Assert.AreEqual(plainList[(int)i], plainList2[(int)i]);
+                Assert.AreEqual(plainList[checked((int)i)], plainList2[checked((int)i)]);
             }
 
             for (ulong i = 0; i < encoder.SlotCount; i++)
             {
-                plainList[(int)i] = 5;
+                plainList[checked((int)i)] = 5;
             }
 
             encoder.Encode(plainList, plain);
@@ -129,7 +129,7 @@ namespace SEALNetTest
 
             for (ulong i = 0; i < encoder.SlotCount; i++)
             {
-                Assert.AreEqual(plainList[(int)i], plainList2[(int)i]);
+                Assert.AreEqual(plainList[checked((int)i)], plainList2[checked((int)i)]);
             }
 
             List<long> shortList = new List<long>();
@@ -153,25 +153,23 @@ namespace SEALNetTest
 
             for (ulong i = 20; i < encoder.SlotCount; i++)
             {
-                Assert.AreEqual(0L, shortList2[(int)i]);
+                Assert.AreEqual(0L, shortList2[checked((int)i)]);
             }
         }
 
         [TestMethod]
         public void EncodeInPlaceTest()
         {
-            List<SmallModulus> coeffModulus = new List<SmallModulus>()
-            {
-                DefaultParams.SmallMods60Bit(0)
-            };
             EncryptionParameters parms = new EncryptionParameters(SchemeType.BFV)
             {
                 PolyModulusDegree = 64,
-                CoeffModulus = coeffModulus,
+                CoeffModulus = CoeffModulus.Create(64, new int[] { 60 }),
                 PlainModulus = new SmallModulus(257)
             };
 
-            SEALContext context = SEALContext.Create(parms);
+            SEALContext context = new SEALContext(parms,
+                expandModChain: false,
+                secLevel: SecLevelType.None);
 
             BatchEncoder encoder = new BatchEncoder(context);
 
@@ -201,20 +199,15 @@ namespace SEALNetTest
         [TestMethod]
         public void SchemeIsCKKSTest()
         {
-            List<SmallModulus> coeffModulus = new List<SmallModulus>
-            {
-                DefaultParams.SmallMods40Bit(0),
-                DefaultParams.SmallMods40Bit(1),
-                DefaultParams.SmallMods40Bit(2),
-                DefaultParams.SmallMods40Bit(3)
-            };
             EncryptionParameters parms = new EncryptionParameters(SchemeType.CKKS)
             {
                 PolyModulusDegree = 8,
-                CoeffModulus = coeffModulus
+                CoeffModulus = CoeffModulus.Create(8, new int[] { 40, 40, 40, 40 })
             };
 
-            SEALContext context = SEALContext.Create(parms);
+            SEALContext context = new SEALContext(parms,
+                expandModChain: false,
+                secLevel: SecLevelType.None);
 
             Assert.ThrowsException<ArgumentException>(() =>
             {
@@ -225,18 +218,16 @@ namespace SEALNetTest
         [TestMethod]
         public void ExceptionsTest()
         {
-            List<SmallModulus> coeffModulus = new List<SmallModulus>()
-            {
-                DefaultParams.SmallMods60Bit(0)
-            };
             EncryptionParameters parms = new EncryptionParameters(SchemeType.BFV)
             {
                 PolyModulusDegree = 64,
-                CoeffModulus = coeffModulus,
+                CoeffModulus = CoeffModulus.Create(64, new int[] { 60 }),
                 PlainModulus = new SmallModulus(257)
             };
 
-            SEALContext context = SEALContext.Create(parms);
+            SEALContext context = new SEALContext(parms,
+                expandModChain: false,
+                secLevel: SecLevelType.None);
             BatchEncoder enc = new BatchEncoder(context);
             List<ulong> valu = new List<ulong>();
             List<ulong> valu_null = null;

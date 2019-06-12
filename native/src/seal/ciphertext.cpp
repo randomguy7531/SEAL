@@ -23,7 +23,7 @@ namespace seal
         scale_ = assign.scale_;
 
         // Then resize
-        resize_internal(assign.size_, assign.poly_modulus_degree_, 
+        resize_internal(assign.size_, assign.poly_modulus_degree_,
             assign.coeff_mod_count_);
 
         // Size is guaranteed to be OK now so copy over
@@ -45,7 +45,7 @@ namespace seal
             throw invalid_argument("encryption parameters are not set correctly");
         }
 
-        auto context_data_ptr = context->context_data(parms_id);
+        auto context_data_ptr = context->get_context_data(parms_id);
         if (!context_data_ptr)
         {
             throw invalid_argument("parms_id is not valid for encryption parameters");
@@ -53,13 +53,13 @@ namespace seal
 
         // Need to set parms_id first
         auto &parms = context_data_ptr->parms();
-        parms_id_ = parms.parms_id();
+        parms_id_ = context_data_ptr->parms_id();
 
         reserve_internal(size_capacity, parms.poly_modulus_degree(),
             safe_cast<size_type>(parms.coeff_modulus().size()));
     }
 
-    void Ciphertext::reserve_internal(size_type size_capacity, 
+    void Ciphertext::reserve_internal(size_type size_capacity,
         size_type poly_modulus_degree, size_type coeff_mod_count)
     {
         if (size_capacity < SEAL_CIPHERTEXT_SIZE_MIN ||
@@ -68,7 +68,7 @@ namespace seal
             throw invalid_argument("invalid size_capacity");
         }
 
-        size_type new_data_capacity = 
+        size_type new_data_capacity =
             mul_safe(size_capacity, poly_modulus_degree, coeff_mod_count);
         size_type new_data_size = min<size_type>(new_data_capacity, data_.size());
 
@@ -76,8 +76,7 @@ namespace seal
         data_.reserve(new_data_capacity);
         data_.resize(new_data_size);
 
-        // Set the size and size_capacity
-        size_capacity_ = size_capacity;
+        // Set the size
         size_ = min<size_type>(size_capacity, size_);
         poly_modulus_degree_ = poly_modulus_degree;
         coeff_mod_count_ = coeff_mod_count;
@@ -96,7 +95,7 @@ namespace seal
             throw invalid_argument("encryption parameters are not set correctly");
         }
 
-        auto context_data_ptr = context->context_data(parms_id);
+        auto context_data_ptr = context->get_context_data(parms_id);
         if (!context_data_ptr)
         {
             throw invalid_argument("parms_id is not valid for encryption parameters");
@@ -104,13 +103,13 @@ namespace seal
 
         // Need to set parms_id first
         auto &parms = context_data_ptr->parms();
-        parms_id_ = parms.parms_id();
+        parms_id_ = context_data_ptr->parms_id();
 
         resize_internal(size, parms.poly_modulus_degree(),
             safe_cast<size_type>(parms.coeff_modulus().size()));
     }
 
-    void Ciphertext::resize_internal(size_type size, 
+    void Ciphertext::resize_internal(size_type size,
         size_type poly_modulus_degree, size_type coeff_mod_count)
     {
         if ((size < SEAL_CIPHERTEXT_SIZE_MIN && size != 0) ||
@@ -120,7 +119,7 @@ namespace seal
         }
 
         // Resize the data
-        size_type new_data_size = 
+        size_type new_data_size =
             mul_safe(size, poly_modulus_degree, coeff_mod_count);
         data_.resize(new_data_size);
 
@@ -128,71 +127,6 @@ namespace seal
         size_ = size;
         poly_modulus_degree_ = poly_modulus_degree;
         coeff_mod_count_ = coeff_mod_count;
-    }
-
-    bool Ciphertext::is_valid_for(shared_ptr<const SEALContext> context) const noexcept
-    {
-        // Check metadata
-        if (!is_metadata_valid_for(context))
-        {
-            return false;
-        }
-
-        // Check the data
-        auto context_data_ptr = context->context_data(parms_id_);
-        auto &coeff_modulus = context_data_ptr->parms().coeff_modulus();
-        const ct_coeff_type *ptr = data();
-        for (size_t i = 0; i < size_; i++)
-        {
-            for (size_t j = 0; j < coeff_mod_count_; j++)
-            {
-                uint64_t modulus = coeff_modulus[j].value();
-                for (size_t k = 0; k < poly_modulus_degree_; k++, ptr++)
-                {
-                    if (*ptr >= modulus)
-                    {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        return true;
-    }
-
-    bool Ciphertext::is_metadata_valid_for(
-        shared_ptr<const SEALContext> context) const noexcept
-    {
-        // Verify parameters
-        if (!context || !context->parameters_set())
-        {
-            return false;
-        }
-
-        // Are the parameters valid for this ciphertext?
-        auto context_data_ptr = context->context_data(parms_id_);
-        if (!context_data_ptr)
-        {
-            return false;
-        }
-
-        // Check that the metadata matches
-        auto &coeff_modulus = context_data_ptr->parms().coeff_modulus();
-        size_t poly_modulus_degree = context_data_ptr->parms().poly_modulus_degree();
-        if ((coeff_modulus.size() != coeff_mod_count_) ||
-            (poly_modulus_degree != poly_modulus_degree_))
-        {
-            return false;
-        }
-
-        // Check that size is either 0 or within right bounds 
-        if ((size_ < SEAL_CIPHERTEXT_SIZE_MIN && size_ != 0) ||
-            size_ > SEAL_CIPHERTEXT_SIZE_MAX)
-        {
-            return false;
-        }
-
-        return true;
     }
 
     void Ciphertext::save(ostream &stream) const
@@ -228,6 +162,8 @@ namespace seal
 
     void Ciphertext::unsafe_load(istream &stream)
     {
+        Ciphertext new_data(data_.pool());
+
         auto old_except_mask = stream.exceptions();
         try
         {
@@ -248,31 +184,28 @@ namespace seal
             stream.read(reinterpret_cast<char*>(&scale), sizeof(double));
 
             // Load the data
-            IntArray<ct_coeff_type> new_data(data_.pool());
-            new_data.load(stream);
-            if (unsigned_neq(new_data.size(),
+            new_data.data_.load(stream);
+            if (unsigned_neq(new_data.data_.size(),
                 mul_safe(size64, poly_modulus_degree64, coeff_mod_count64)))
             {
                 throw invalid_argument("ciphertext data is invalid");
             }
 
             // Set values
-            parms_id_ = parms_id;
-            is_ntt_form_ = (is_ntt_form_byte == SEAL_BYTE(0)) ? false : true;
-            size_ = safe_cast<size_type>(size64);
-            poly_modulus_degree_ = safe_cast<size_type>(poly_modulus_degree64);
-            coeff_mod_count_ = safe_cast<size_type>(coeff_mod_count64);
-            scale_ = scale;
-
-            // Set the data
-            data_.swap_with(new_data);
+            new_data.parms_id_ = parms_id;
+            new_data.is_ntt_form_ = (is_ntt_form_byte == SEAL_BYTE(0)) ? false : true;
+            new_data.size_ = safe_cast<size_type>(size64);
+            new_data.poly_modulus_degree_ = safe_cast<size_type>(poly_modulus_degree64);
+            new_data.coeff_mod_count_ = safe_cast<size_type>(coeff_mod_count64);
+            new_data.scale_ = scale;
         }
         catch (const exception &)
         {
             stream.exceptions(old_except_mask);
             throw;
         }
-
         stream.exceptions(old_except_mask);
+
+        swap(*this, new_data);
     }
 }

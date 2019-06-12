@@ -15,17 +15,15 @@ namespace SEALNetTest
         [TestMethod]
         public void CreateTest()
         {
-            List<SmallModulus> coeffModulus = new List<SmallModulus>
-            {
-                DefaultParams.SmallMods40Bit(0)
-            };
             EncryptionParameters parms = new EncryptionParameters(SchemeType.BFV)
             {
                 PolyModulusDegree = 64,
                 PlainModulus = new SmallModulus(1 << 6),
-                CoeffModulus = coeffModulus
+                CoeffModulus = CoeffModulus.Create(64, new int[] { 40 })
             };
-            SEALContext context = SEALContext.Create(parms);
+            SEALContext context = new SEALContext(parms,
+                expandModChain: false,
+                secLevel: SecLevelType.None);
             KeyGenerator keygen = new KeyGenerator(context);
 
             SecretKey secret = keygen.SecretKey;
@@ -44,17 +42,15 @@ namespace SEALNetTest
         [TestMethod]
         public void SaveLoadTest()
         {
-            List<SmallModulus> coeffModulus = new List<SmallModulus>
-            {
-                DefaultParams.SmallMods40Bit(0)
-            };
             EncryptionParameters parms = new EncryptionParameters(SchemeType.BFV)
             {
                 PolyModulusDegree = 64,
                 PlainModulus = new SmallModulus(1 << 6),
-                CoeffModulus = coeffModulus
+                CoeffModulus = CoeffModulus.Create(64, new int[] { 40 })
             };
-            SEALContext context = SEALContext.Create(parms);
+            SEALContext context = new SEALContext(parms,
+                expandModChain: false,
+                secLevel: SecLevelType.None);
             KeyGenerator keygen = new KeyGenerator(context);
 
             SecretKey secret = keygen.SecretKey;
@@ -91,15 +87,15 @@ namespace SEALNetTest
         [TestMethod]
         public void ExceptionsTest()
         {
-            SEALContext context = GlobalContext.Context;
+            SEALContext context = GlobalContext.BFVContext;
             SecretKey key = new SecretKey();
 
             Assert.ThrowsException<ArgumentNullException>(() => key = new SecretKey(null));
 
             Assert.ThrowsException<ArgumentNullException>(() => key.Set(null));
 
-            Assert.ThrowsException<ArgumentNullException>(() => key.IsValidFor(null));
-            Assert.ThrowsException<ArgumentNullException>(() => key.IsMetadataValidFor(null));
+            Assert.ThrowsException<ArgumentNullException>(() => ValCheck.IsValidFor(key, null));
+            Assert.ThrowsException<ArgumentNullException>(() => ValCheck.IsMetadataValidFor(key, null));
 
             Assert.ThrowsException<ArgumentNullException>(() => key.Save(null));
             Assert.ThrowsException<ArgumentNullException>(() => key.UnsafeLoad(null));

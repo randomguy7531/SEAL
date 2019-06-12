@@ -33,11 +33,10 @@ namespace seal
 
         static void swap_data(seal::Plaintext *plain, seal::IntArray<uint64_t> &new_data)
         {
-            plain->data_.swap_with(new_data);
+            swap(plain->data_, new_data);
         }
     };
 }
-
 
 SEALNETNATIVE HRESULT SEALCALL Plaintext_Create1(void *memoryPoolHandle, void **plaintext)
 {
@@ -118,6 +117,17 @@ SEALNETNATIVE HRESULT SEALCALL Plaintext_Create4(char *hexPoly, void *memoryPool
     }
 
     return E_UNEXPECTED;
+}
+
+SEALNETNATIVE HRESULT SEALCALL Plaintext_Create5(void *copy, void **plaintext)
+{
+    Plaintext *copyptr = FromVoid<Plaintext>(copy);
+    IfNullRet(copyptr, E_POINTER);
+    IfNullRet(plaintext, E_POINTER);
+
+    Plaintext *plain = new Plaintext(*copyptr);
+    *plaintext = plain;
+    return S_OK;
 }
 
 SEALNETNATIVE HRESULT SEALCALL Plaintext_Set1(void *thisptr, void *assign)
@@ -407,6 +417,16 @@ SEALNETNATIVE HRESULT SEALCALL Plaintext_SignificantCoeffCount(void *thisptr, ui
     return S_OK;
 }
 
+SEALNETNATIVE HRESULT SEALCALL Plaintext_NonZeroCoeffCount(void *thisptr, uint64_t *nonzero_coeff_count)
+{
+    Plaintext *plain = FromVoid<Plaintext>(thisptr);
+    IfNullRet(plain, E_POINTER);
+    IfNullRet(nonzero_coeff_count, E_POINTER);
+
+    *nonzero_coeff_count = plain->nonzero_coeff_count();
+    return S_OK;
+}
+
 SEALNETNATIVE HRESULT SEALCALL Plaintext_Scale(void *thisptr, double *scale)
 {
     Plaintext *plain = FromVoid<Plaintext>(thisptr);
@@ -438,30 +458,6 @@ SEALNETNATIVE HRESULT SEALCALL Plaintext_Equals(void *thisptr, void *other, bool
     return S_OK;
 }
 
-SEALNETNATIVE HRESULT SEALCALL Plaintext_IsValidFor(void *thisptr, void *contextptr, bool *result)
-{
-    Plaintext *plain = FromVoid<Plaintext>(thisptr);
-    IfNullRet(plain, E_POINTER);
-    const auto &sharedctx = SharedContextFromVoid(contextptr);
-    IfNullRet(sharedctx.get(), E_POINTER);
-    IfNullRet(result, E_POINTER);
-
-    *result = plain->is_valid_for(sharedctx);
-    return S_OK;
-}
-
-SEALNETNATIVE HRESULT SEALCALL Plaintext_IsMetadataValidFor(void *thisptr, void *contextptr, bool *result)
-{
-    Plaintext *plain = FromVoid<Plaintext>(thisptr);
-    IfNullRet(plain, E_POINTER);
-    const auto &sharedctx = SharedContextFromVoid(contextptr);
-    IfNullRet(sharedctx.get(), E_POINTER);
-    IfNullRet(result, E_POINTER);
-
-    *result = plain->is_metadata_valid_for(sharedctx);
-    return S_OK;
-}
-
 SEALNETNATIVE HRESULT SEALCALL Plaintext_SwapData(void *thisptr, uint64_t count, uint64_t *new_data)
 {
     Plaintext *plain = FromVoid<Plaintext>(thisptr);
@@ -470,10 +466,7 @@ SEALNETNATIVE HRESULT SEALCALL Plaintext_SwapData(void *thisptr, uint64_t count,
 
     IntArray<uint64_t> new_array(plain->pool());
     new_array.resize(count);
-    for (uint64_t i = 0; i < count; i++)
-    {
-        new_array[i] = new_data[i];
-    }
+    copy_n(new_data, count, new_array.begin());
 
     Plaintext::PlaintextPrivateHelper::swap_data(plain, new_array);
     return S_OK;

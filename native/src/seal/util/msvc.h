@@ -26,8 +26,15 @@
 
 #endif
 
+// In Visual Studio redefine std::byte (SEAL_BYTE)
+#undef SEAL_USE_STD_BYTE
+
+// In Visual Studio for now we disable the use of std::shared_mutex
+#undef SEAL_USE_SHARED_MUTEX
+
 // Are we compiling with C++17 or newer
 #if (__cplusplus >= 201703L)
+
 // Use `if constexpr'
 #define SEAL_USE_IF_CONSTEXPR
 
@@ -37,11 +44,6 @@
 #undef SEAL_USE_IF_CONSTEXPR
 #undef SEAL_USE_MAYBE_UNUSED
 #endif
-
-// Define SEAL_ENFORCE_HE_STD_SECURITY to enforce at least 128-bit security level 
-// based on HomomorphicEncryption.org estimates. This is incompatible with the 
-// unit tests so it is disabled by default.
-#undef SEAL_ENFORCE_HE_STD_SECURITY
 
 // X64
 #ifdef _M_X64
@@ -78,7 +80,7 @@
 #endif
 
 #endif
-#else 
+#else
 #undef SEAL_USE_INTRIN
 
 #endif //_M_X64

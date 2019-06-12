@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include "seal/decryptor.h"
+#include "seal/valcheck.h"
 #include "seal/util/common.h"
 #include "seal/util/uintcore.h"
 #include "seal/util/uintarith.h"
@@ -30,24 +31,20 @@ namespace seal
         {
             throw invalid_argument("encryption parameters are not set correctly");
         }
-        if (secret_key.parms_id() != context_->first_parms_id())
+        if (secret_key.parms_id() != context_->key_parms_id())
         {
             throw invalid_argument("secret key is not valid for encryption parameters");
         }
 
-        auto &parms = context_->context_data()->parms();
+        auto &parms = context_->key_context_data()->parms();
         auto &coeff_modulus = parms.coeff_modulus();
         size_t coeff_count = parms.poly_modulus_degree();
         size_t coeff_mod_count = coeff_modulus.size();
 
-        // Allocate secret_key_ and copy over value
-        secret_key_ = allocate_poly(coeff_count, coeff_mod_count, pool_);
-        set_poly_poly(secret_key.data().data(), coeff_count, coeff_mod_count, 
-            secret_key_.get());
-
         // Set the secret_key_array to have size 1 (first power of secret)
+        // and copy over data
         secret_key_array_ = allocate_poly(coeff_count, coeff_mod_count, pool_);
-        set_poly_poly(secret_key_.get(), coeff_count, coeff_mod_count, 
+        set_poly_poly(secret_key.data().data(), coeff_count, coeff_mod_count,
             secret_key_array_.get());
         secret_key_array_size_ = 1;
     }
@@ -55,12 +52,12 @@ namespace seal
     void Decryptor::decrypt(const Ciphertext &encrypted, Plaintext &destination)
     {
         // Verify that encrypted is valid.
-        if (!encrypted.is_valid_for(context_))
+        if (!is_valid_for(encrypted, context_))
         {
             throw invalid_argument("encrypted is not valid for encryption parameters");
         }
 
-        auto &context_data = *context_->context_data();
+        auto &context_data = *context_->first_context_data();
         auto &parms = context_data.parms();
 
         switch (parms.scheme())
@@ -78,7 +75,7 @@ namespace seal
         }
     }
 
-    void Decryptor::bfv_decrypt(const Ciphertext &encrypted, 
+    void Decryptor::bfv_decrypt(const Ciphertext &encrypted,
         Plaintext &destination, MemoryPoolHandle pool)
     {
         if (encrypted.is_ntt_form())
@@ -86,14 +83,14 @@ namespace seal
             throw invalid_argument("encrypted cannot be in NTT form");
         }
 
-        auto &context_data = *context_->context_data(encrypted.parms_id());
+        auto &context_data = *context_->get_context_data(encrypted.parms_id());
         auto &parms = context_data.parms();
         auto &coeff_modulus = parms.coeff_modulus();
         size_t coeff_count = parms.poly_modulus_degree();
         size_t coeff_mod_count = coeff_modulus.size();
         size_t rns_poly_uint64_count = mul_safe(coeff_count, coeff_mod_count);
-        size_t first_rns_poly_uint64_count = mul_safe(coeff_count,
-            context_->context_data()->parms().coeff_modulus().size());
+        size_t key_rns_poly_uint64_count = mul_safe(coeff_count,
+            context_->key_context_data()->parms().coeff_modulus().size());
         size_t encrypted_size = encrypted.size();
 
         auto &small_ntt_tables = context_data.small_ntt_tables();
@@ -148,7 +145,7 @@ namespace seal
                     tmp_dest_modq.get() + (i * coeff_count));
 
                 current_array1 += rns_poly_uint64_count;
-                current_array2 += first_rns_poly_uint64_count;
+                current_array2 += key_rns_poly_uint64_count;
             }
 
             // Perform inverse NTT
@@ -223,12 +220,12 @@ namespace seal
         destination.parms_id() = parms_id_zero;
 
         // Perform final multiplication by gamma inverse mod plain_modulus
-        multiply_poly_scalar_coeffmod(wide_destination.get(), 
+        multiply_poly_scalar_coeffmod(wide_destination.get(),
             max(plain_coeff_count, size_t(1)),
             inv_gamma, plain_gamma_array[0], destination.data());
     }
 
-    void Decryptor::ckks_decrypt(const Ciphertext &encrypted, 
+    void Decryptor::ckks_decrypt(const Ciphertext &encrypted,
         Plaintext &destination, MemoryPoolHandle pool)
     {
         if (!encrypted.is_ntt_form())
@@ -237,14 +234,14 @@ namespace seal
         }
 
         // We already know that the parameters are valid
-        auto &context_data = *context_->context_data(encrypted.parms_id());
+        auto &context_data = *context_->get_context_data(encrypted.parms_id());
         auto &parms = context_data.parms();
         auto &coeff_modulus = parms.coeff_modulus();
         size_t coeff_count = parms.poly_modulus_degree();
         size_t coeff_mod_count = coeff_modulus.size();
         size_t rns_poly_uint64_count = mul_safe(coeff_count, coeff_mod_count);
-        size_t first_rns_poly_uint64_count = mul_safe(coeff_count,
-            context_->context_data()->parms().coeff_modulus().size());
+        size_t key_rns_poly_uint64_count = mul_safe(coeff_count,
+            context_->key_context_data()->parms().coeff_modulus().size());
         size_t encrypted_size = encrypted.size();
 
         // Make sure we have enough secret key powers computed
@@ -297,7 +294,7 @@ namespace seal
 
                 // go to c_{1+j+1} and s^{1+j+1} mod qi
                 current_array1 += rns_poly_uint64_count;
-                current_array2 += first_rns_poly_uint64_count;
+                current_array2 += key_rns_poly_uint64_count;
             }
 
             // add c_0 into destination
@@ -307,7 +304,6 @@ namespace seal
         }
 
         // Set destination parameters as in encrypted
-        //destination.parms_id() = last_parms_id;
         destination.parms_id() = encrypted.parms_id();
         destination.scale() = encrypted.scale();
     }
@@ -319,14 +315,18 @@ namespace seal
         {
             throw invalid_argument("max_power must be at least 1");
         }
+        if (!secret_key_array_size_ || !secret_key_array_)
+        {
+            throw logic_error("secret_key_array_ is uninitialized");
+        }
 #endif
         // WARNING: This function must be called with the original context_data
-        auto &context_data = *context_->context_data();
+        auto &context_data = *context_->key_context_data();
         auto &parms = context_data.parms();
         auto &coeff_modulus = parms.coeff_modulus();
         size_t coeff_count = parms.poly_modulus_degree();
         size_t coeff_mod_count = coeff_modulus.size();
-        size_t rns_poly_uint64_count = mul_safe(coeff_count, coeff_mod_count);
+        size_t key_rns_poly_uint64_count = mul_safe(coeff_count, coeff_mod_count);
 
         ReaderLock reader_lock(secret_key_array_locker_.acquire_read());
 
@@ -342,14 +342,17 @@ namespace seal
 
         // Need to extend the array
         // Compute powers of secret key until max_power
-        auto new_secret_key_array(allocate_poly(mul_safe(new_size, coeff_count),
-            coeff_mod_count, pool_));
-        set_poly_poly(secret_key_array_.get(), mul_safe(old_size, coeff_count), 
+        auto new_secret_key_array(allocate_poly(
+            mul_safe(new_size, coeff_count), coeff_mod_count, pool_));
+        set_poly_poly(secret_key_array_.get(), old_size * coeff_count,
+            coeff_mod_count, new_secret_key_array.get());
+
+        set_poly_poly(secret_key_array_.get(), mul_safe(old_size, coeff_count),
             coeff_mod_count, new_secret_key_array.get());
 
         uint64_t *prev_poly_ptr = new_secret_key_array.get() +
-            mul_safe(old_size - 1, rns_poly_uint64_count);
-        uint64_t *next_poly_ptr = prev_poly_ptr + rns_poly_uint64_count;
+            mul_safe(old_size - 1, key_rns_poly_uint64_count);
+        uint64_t *next_poly_ptr = prev_poly_ptr + key_rns_poly_uint64_count;
 
         // Since all of the key powers in secret_key_array_ are already NTT transformed,
         // to get the next one we simply need to compute a dyadic product of the last
@@ -364,7 +367,7 @@ namespace seal
                     next_poly_ptr + (j * coeff_count));
             }
             prev_poly_ptr = next_poly_ptr;
-            next_poly_ptr += rns_poly_uint64_count;
+            next_poly_ptr += key_rns_poly_uint64_count;
         }
 
 
@@ -430,7 +433,7 @@ namespace seal
                 multiply_uint_uint64(coeff_products_array + (j * coeff_mod_count),
                     coeff_mod_count, tmp, coeff_mod_count, temp.get());
                 add_uint_uint_mod(temp.get(), value + (i * coeff_mod_count),
-                    context_data.total_coeff_modulus(), 
+                    context_data.total_coeff_modulus(),
                     coeff_mod_count, value + (i * coeff_mod_count));
             }
             set_zero_uint(coeff_mod_count, temp.get());
@@ -441,12 +444,12 @@ namespace seal
     int Decryptor::invariant_noise_budget(const Ciphertext &encrypted)
     {
         // Verify that encrypted is valid.
-        if (!encrypted.is_valid_for(context_))
+        if (!is_valid_for(encrypted, context_))
         {
             throw invalid_argument("encrypted is not valid for encryption parameters");
         }
 
-        if (context_->context_data()->parms().scheme() != scheme_type::BFV)
+        if (context_->key_context_data()->parms().scheme() != scheme_type::BFV)
         {
             throw logic_error("unsupported scheme");
         }
@@ -455,12 +458,14 @@ namespace seal
             throw invalid_argument("encrypted cannot be in NTT form");
         }
 
-        auto &context_data = *context_->context_data(encrypted.parms_id());
+        auto &context_data = *context_->get_context_data(encrypted.parms_id());
         auto &parms = context_data.parms();
         auto &coeff_modulus = parms.coeff_modulus();
         size_t coeff_count = parms.poly_modulus_degree();
         size_t coeff_mod_count = coeff_modulus.size();
         size_t rns_poly_uint64_count = mul_safe(coeff_count, coeff_mod_count);
+        size_t key_rns_poly_uint64_count = mul_safe(coeff_count,
+            context_->key_context_data()->parms().coeff_modulus().size());
         size_t encrypted_size = encrypted.size();
         uint64_t plain_modulus = parms.plain_modulus().value();
 
@@ -483,7 +488,7 @@ namespace seal
         */
         // put < (c_1 , c_2, ... , c_{count-1}) , (s,s^2,...,s^{count-1}) > mod q
         // in destination_poly.
-        // Make a copy of the encryption for NTT (except the first polynomial is 
+        // Make a copy of the encryption for NTT (except the first polynomial is
         // not needed).
         auto encrypted_copy(allocate_poly(
             mul_safe(encrypted_size - 1, coeff_count), coeff_mod_count, pool_));
@@ -509,13 +514,13 @@ namespace seal
 
                 dyadic_product_coeffmod(copy_operand1.get(), current_array2, coeff_count,
                     coeff_modulus[i], copy_operand1.get());
-                add_poly_poly_coeffmod(noise_poly.get() + (i * coeff_count), 
+                add_poly_poly_coeffmod(noise_poly.get() + (i * coeff_count),
                     copy_operand1.get(),
                     coeff_count, coeff_modulus[i],
                     noise_poly.get() + (i * coeff_count));
 
                 current_array1 += rns_poly_uint64_count;
-                current_array2 += rns_poly_uint64_count;
+                current_array2 += key_rns_poly_uint64_count;
             }
 
             // Perform inverse NTT

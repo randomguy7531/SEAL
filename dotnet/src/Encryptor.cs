@@ -8,13 +8,13 @@ namespace Microsoft.Research.SEAL
 {
     /// <summary>
     /// Encrypts Plaintext objects into Ciphertext objects. Constructing an Encryptor requires
-    /// a SEALContext with valid encryption parameters, and the public key. 
+    /// a SEALContext with valid encryption parameters, and the public key.
     /// </summary>
     /// <remarks>
     /// <para>
     /// Overloads
     /// For the encrypt function we provide two overloads concerning the memory pool used in
-    /// allocations needed during the operation. In one overload the global memory pool is used 
+    /// allocations needed during the operation. In one overload the global memory pool is used
     /// for this purpose, and in another overload the user can supply a MemoryPoolHandle
     /// to to be used instead. This is to allow one single Encryptor to be used concurrently by
     /// several threads without running into thread contention in allocations taking place during
@@ -25,18 +25,18 @@ namespace Microsoft.Research.SEAL
     /// </para>
     /// <para>
     /// NTT form
-    /// When using the BFV scheme (SchemeType.BFV), all plaintext and ciphertexts should 
-    /// remain by default in the usual coefficient representation, i.e. not in NTT form. 
-    /// When using the CKKS scheme (SchemeType.CKKS), all plaintexts and ciphertexts 
-    /// should remain by default in NTT form. We call these scheme-specific NTT states the 
-    /// "default NTT form". Decryption requires the input ciphertexts to be in the default 
+    /// When using the BFV scheme (SchemeType.BFV), all plaintext and ciphertexts should
+    /// remain by default in the usual coefficient representation, i.e. not in NTT form.
+    /// When using the CKKS scheme (SchemeType.CKKS), all plaintexts and ciphertexts
+    /// should remain by default in NTT form. We call these scheme-specific NTT states the
+    /// "default NTT form". Decryption requires the input ciphertexts to be in the default
     /// NTT form, and will throw an exception if this is not the case.
     /// </para>
     /// </remarks>
     public class Encryptor : NativeObject
     {
         /// <summary>
-        /// Creates an Encryptor instance initialized with the specified SEALContext 
+        /// Creates an Encryptor instance initialized with the specified SEALContext
         /// and public key.
         /// </summary>
         /// <param name="context">The SEALContext</param>
@@ -51,14 +51,18 @@ namespace Microsoft.Research.SEAL
                 throw new ArgumentNullException(nameof(context));
             if (null == publicKey)
                 throw new ArgumentNullException(nameof(publicKey));
+            if (!context.ParametersSet)
+                throw new ArgumentException("Encryption parameters are not set correctly");
+            if (!ValCheck.IsValidFor(publicKey, context))
+                throw new ArgumentException("Public key is not valid for encryption parameters");
 
             NativeMethods.Encryptor_Create(context.NativePtr, publicKey.NativePtr, out IntPtr ptr);
             NativePtr = ptr;
         }
 
         /// <summary>
-        /// Encrypts a Plaintext and stores the result in the destination parameter. Dynamic
-        /// memory allocations in the process are allocated from the memory pool pointed to by 
+        /// Encrypts a plaintext and stores the result in the destination parameter. Dynamic
+        /// memory allocations in the process are allocated from the memory pool pointed to by
         /// the given MemoryPoolHandle.
         /// </summary>
         /// <param name="plain">The plaintext to encrypt</param>
@@ -68,7 +72,7 @@ namespace Microsoft.Research.SEAL
         /// <exception cref="ArgumentException">if plain is not valid for the encryption parameters</exception>
         /// <exception cref="ArgumentException">if plain is not in default NTT form</exception>
         /// <exception cref="ArgumentException">if pool is uninitialized</exception>
-        public void Encrypt(Plaintext plain, Ciphertext destination, 
+        public void Encrypt(Plaintext plain, Ciphertext destination,
             MemoryPoolHandle pool = null)
         {
             if (null == plain)
@@ -77,8 +81,56 @@ namespace Microsoft.Research.SEAL
                 throw new ArgumentNullException(nameof(destination));
 
             IntPtr poolHandle = pool?.NativePtr ?? IntPtr.Zero;
-
             NativeMethods.Encryptor_Encrypt(NativePtr, plain.NativePtr, destination.NativePtr, poolHandle);
+        }
+
+        /// <summary>
+        /// Encrypts a zero plaintext and stores the result in the destination parameter.
+        /// </summary>
+        /// <remarks>
+        /// Encrypts a zero plaintext and stores the result in the destination parameter.
+        /// The encryption parameters for the resulting ciphertext correspond to the given
+        /// parmsId. Dynamic memory allocations in the process are allocated from the memory
+        /// pool pointed to by the given MemoryPoolHandle.
+        /// </remarks>
+        /// <param name="parmsId">The ParmsId for the resulting ciphertext</param>
+        /// <param name="destination">The ciphertext to overwrite with the encrypted plaintext</param>
+        /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
+        /// <exception cref="ArgumentNullException">if either parmsId or destination are null</exception>
+        /// <exception cref="ArgumentException">if parmsId is not valid for the encryption parameters</exception>
+        /// <exception cref="ArgumentException">if pool is uninitialized</exception>
+        public void EncryptZero(ParmsId parmsId, Ciphertext destination, MemoryPoolHandle pool = null)
+        {
+            if (null == parmsId)
+                throw new ArgumentNullException(nameof(parmsId));
+            if (null == destination)
+                throw new ArgumentNullException(nameof(destination));
+
+            IntPtr poolHandle = pool?.NativePtr ?? IntPtr.Zero;
+            NativeMethods.Encryptor_EncryptZero1(NativePtr, parmsId.Block, destination.NativePtr, poolHandle);
+        }
+
+        /// <summary>
+        /// Encrypts a zero plaintext and stores the result in the destination parameter.
+        /// </summary>
+        /// <remarks>
+        /// Encrypts a zero plaintext and stores the result in the destination parameter.
+        /// The encryption parameters for the resulting ciphertext correspond to the
+        /// highest(data) level in the modulus switching chain. Dynamic memory allocations
+        /// in the process are allocated from the memory pool pointed to by the given
+        /// MemoryPoolHandle.
+        /// </remarks>
+        /// <param name="destination">The ciphertext to overwrite with the encrypted plaintext</param>
+        /// <param name="pool">The MemoryPoolHandle pointing to a valid memory pool</param>
+        /// <exception cref="ArgumentNullException">if destination is null</exception>
+        /// <exception cref="ArgumentException">if pool is uninitialized</exception>
+        public void EncryptZero(Ciphertext destination, MemoryPoolHandle pool = null)
+        {
+            if (null == destination)
+                throw new ArgumentNullException(nameof(destination));
+
+            IntPtr poolHandle = pool?.NativePtr ?? IntPtr.Zero;
+            NativeMethods.Encryptor_EncryptZero2(NativePtr, destination.NativePtr, poolHandle);
         }
 
         /// <summary>

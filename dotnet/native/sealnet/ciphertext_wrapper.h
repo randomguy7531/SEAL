@@ -7,7 +7,7 @@
 //
 // This API is provided as a simple interface for Microsoft SEAL library
 // that can be PInvoked by .Net code.
-// 
+//
 ///////////////////////////////////////////////////////////////////////////
 
 #include "sealnet/defines.h"
@@ -18,7 +18,7 @@ SEALNETNATIVE HRESULT SEALCALL Ciphertext_Create1(void *pool, void **cipher);
 SEALNETNATIVE HRESULT SEALCALL Ciphertext_Create2(void *copy, void **cipher);
 
 SEALNETNATIVE HRESULT SEALCALL Ciphertext_Create3(void *context, void *pool, void **cipher);
- 
+
 SEALNETNATIVE HRESULT SEALCALL Ciphertext_Create4(void *context, uint64_t *parms_id, void *pool, void **cipher);
 
 SEALNETNATIVE HRESULT SEALCALL Ciphertext_Create5(void *context, uint64_t *parms_id, uint64_t capacity, void *pool, void **ciphertext);
@@ -72,10 +72,6 @@ SEALNETNATIVE HRESULT SEALCALL Ciphertext_Scale(void *thisptr, double *scale);
 SEALNETNATIVE HRESULT SEALCALL Ciphertext_SetScale(void *thisptr, double scale);
 
 SEALNETNATIVE HRESULT SEALCALL Ciphertext_Release(void *thisptr);
-
-SEALNETNATIVE HRESULT SEALCALL Ciphertext_IsValidFor(void *thisptr, void *context, bool *result);
-
-SEALNETNATIVE HRESULT SEALCALL Ciphertext_IsMetadataValidFor(void *thisptr, void *context, bool *result);
 
 SEALNETNATIVE HRESULT SEALCALL Ciphertext_IsTransparent(void *thisptr, bool *result);
 

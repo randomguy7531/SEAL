@@ -15,14 +15,27 @@ using namespace std;
 using namespace seal;
 using namespace sealnet;
 
-SEALNETNATIVE HRESULT SEALCALL EncParams_Create1(int scheme, void **enc_params)
+namespace seal
+{
+    /**
+    Enables access to private members of seal::EncryptionParameters.
+    */
+    struct EncryptionParameters::EncryptionParametersPrivateHelper
+    {
+        static auto parms_id(const EncryptionParameters &parms)
+        {
+            return parms.parms_id();
+        }
+    };
+}
+
+SEALNETNATIVE HRESULT SEALCALL EncParams_Create1(uint8_t scheme, void **enc_params)
 {
     IfNullRet(enc_params, E_POINTER);
 
     try
     {
-        scheme_type schemetype = static_cast<scheme_type>(scheme);
-        EncryptionParameters *params = new EncryptionParameters(schemetype);
+        EncryptionParameters *params = new EncryptionParameters(scheme);
         *enc_params = params;
         return S_OK;
     }
@@ -95,7 +108,7 @@ SEALNETNATIVE HRESULT SEALCALL EncParams_GetCoeffModulus(void *thisptr, uint64_t
     IfNullRet(params, E_POINTER);
     IfNullRet(length, E_POINTER);
 
-    BuildCoeffPointers(params->coeff_modulus(), length, coeffs);
+    BuildSmallModulusPointers(params->coeff_modulus(), length, coeffs);
     return S_OK;
 }
 
@@ -124,13 +137,13 @@ SEALNETNATIVE HRESULT SEALCALL EncParams_SetCoeffModulus(void *thisptr, uint64_t
     }
 }
 
-SEALNETNATIVE HRESULT SEALCALL EncParams_GetScheme(void *thisptr, int *scheme)
+SEALNETNATIVE HRESULT SEALCALL EncParams_GetScheme(void *thisptr, uint8_t *scheme)
 {
     EncryptionParameters *params = FromVoid<EncryptionParameters>(thisptr);
     IfNullRet(params, E_POINTER);
     IfNullRet(scheme, E_POINTER);
 
-    *scheme = static_cast<int>(params->scheme());
+    *scheme = static_cast<uint8_t>(params->scheme());
     return S_OK;
 }
 
@@ -141,7 +154,7 @@ SEALNETNATIVE HRESULT SEALCALL EncParams_GetParmsId(void *thisptr, uint64_t *par
     IfNullRet(parms_id, E_POINTER);
 
     // We will assume the array is always size sha3_block_uint64_count
-    const auto &parmsid = params->parms_id();
+    auto parmsid = EncryptionParameters::EncryptionParametersPrivateHelper::parms_id(*params);
     for (size_t i = 0; i < util::HashFunction::sha3_block_uint64_count; i++)
     {
         parms_id[i] = parmsid[i];
@@ -193,42 +206,6 @@ SEALNETNATIVE HRESULT SEALCALL EncParams_SetPlainModulus2(void *thisptr, uint64_
     {
         return HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION);
     }
-}
-
-SEALNETNATIVE HRESULT SEALCALL EncParams_NoiseStandardDeviation(void *thisptr, double *nsd)
-{
-    EncryptionParameters *params = FromVoid<EncryptionParameters>(thisptr);
-    IfNullRet(params, E_POINTER);
-    IfNullRet(nsd, E_POINTER);
-
-    *nsd = params->noise_standard_deviation();
-    return S_OK;
-}
-
-SEALNETNATIVE HRESULT SEALCALL EncParams_SetNoiseStandardDeviation(void *thisptr, double nsd)
-{
-    EncryptionParameters *params = FromVoid<EncryptionParameters>(thisptr);
-    IfNullRet(params, E_POINTER);
-
-    try
-    {
-        params->set_noise_standard_deviation(nsd);
-        return S_OK;
-    }
-    catch (const invalid_argument&)
-    {
-        return E_INVALIDARG;
-    }
-}
-
-SEALNETNATIVE HRESULT SEALCALL EncParams_NoiseMaxDeviation(void *thisptr, double *nmd)
-{
-    EncryptionParameters *params = FromVoid<EncryptionParameters>(thisptr);
-    IfNullRet(params, E_POINTER);
-    IfNullRet(nmd, E_POINTER);
-
-    *nmd = params->noise_max_deviation();
-    return S_OK;
 }
 
 SEALNETNATIVE HRESULT SEALCALL EncParams_Equals(void *thisptr, void *otherptr, bool *result)

@@ -79,7 +79,6 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_Create3(void *sealContext, void *sec
     }
 }
 
-
 SEALNETNATIVE HRESULT SEALCALL KeyGenerator_Destroy(void *thisptr)
 {
     KeyGenerator *keygen = FromVoid<KeyGenerator>(thisptr);
@@ -89,7 +88,7 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_Destroy(void *thisptr)
     return S_OK;
 }
 
-SEALNETNATIVE HRESULT SEALCALL KeyGenerator_RelinKeys(void *thisptr, int decompositionBitCount, uint64_t count, void **relin_keys)
+SEALNETNATIVE HRESULT SEALCALL KeyGenerator_RelinKeys(void *thisptr, void **relin_keys)
 {
     KeyGenerator *keygen = FromVoid<KeyGenerator>(thisptr);
     IfNullRet(keygen, E_POINTER);
@@ -97,7 +96,7 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_RelinKeys(void *thisptr, int decompo
 
     try
     {
-        RelinKeys *relinKeys = new RelinKeys(keygen->relin_keys(decompositionBitCount, safe_cast<size_t>(count)));
+        RelinKeys *relinKeys = new RelinKeys(keygen->relin_keys());
         *relin_keys = relinKeys;
         return S_OK;
     }
@@ -107,7 +106,7 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_RelinKeys(void *thisptr, int decompo
     }
 }
 
-SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys1(void *thisptr, int decompositionBitCount, void **galois_keys)
+SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys1(void *thisptr, void **galois_keys)
 {
     KeyGenerator *keygen = FromVoid<KeyGenerator>(thisptr);
     IfNullRet(keygen, E_POINTER);
@@ -115,7 +114,7 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys1(void *thisptr, int decom
 
     try
     {
-        GaloisKeys *keys = new GaloisKeys(keygen->galois_keys(decompositionBitCount));
+        GaloisKeys *keys = new GaloisKeys(keygen->galois_keys());
         *galois_keys = keys;
         return S_OK;
     }
@@ -125,7 +124,7 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys1(void *thisptr, int decom
     }
 }
 
-SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys2(void *thisptr, int decomposition_bit_count, uint64_t count, uint64_t *galois_elts, void **galois_keys)
+SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys2(void *thisptr, uint64_t count, uint64_t *galois_elts, void **galois_keys)
 {
     KeyGenerator *keygen = FromVoid<KeyGenerator>(thisptr);
     IfNullRet(keygen, E_POINTER);
@@ -137,7 +136,7 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys2(void *thisptr, int decom
 
     try
     {
-        GaloisKeys *keys = new GaloisKeys(keygen->galois_keys(decomposition_bit_count, galois_elts_vec));
+        GaloisKeys *keys = new GaloisKeys(keygen->galois_keys(galois_elts_vec));
         *galois_keys = keys;
         return S_OK;
     }
@@ -147,7 +146,7 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys2(void *thisptr, int decom
     }
 }
 
-SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys3(void *thisptr, int decomposition_bit_count, uint64_t count, int *steps, void **galois_keys)
+SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys3(void *thisptr, uint64_t count, int *steps, void **galois_keys)
 {
     KeyGenerator *keygen = FromVoid<KeyGenerator>(thisptr);
     IfNullRet(keygen, E_POINTER);
@@ -159,7 +158,7 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_GaloisKeys3(void *thisptr, int decom
 
     try
     {
-        GaloisKeys *keys = new GaloisKeys(keygen->galois_keys(decomposition_bit_count, steps_vec));
+        GaloisKeys *keys = new GaloisKeys(keygen->galois_keys(steps_vec));
         *galois_keys = keys;
         return S_OK;
     }
@@ -179,10 +178,8 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_PublicKey(void *thisptr, void **publ
     IfNullRet(keygen, E_POINTER);
     IfNullRet(public_key, E_POINTER);
 
-    // This returns an existing object, not a new object.
-    // Make sure the managed side does not try to delete it.
-    const PublicKey *pubKey = &keygen->public_key();
-    *public_key = const_cast<PublicKey*>(pubKey);
+    PublicKey *key = new PublicKey(keygen->public_key());
+    *public_key = key;
     return S_OK;
 }
 
@@ -192,9 +189,7 @@ SEALNETNATIVE HRESULT SEALCALL KeyGenerator_SecretKey(void *thisptr, void **secr
     IfNullRet(keygen, E_POINTER);
     IfNullRet(secret_key, E_POINTER);
 
-    // This returns an existing object, not a new object.
-    // Make sure the managed side does not try to delete it.
-    const SecretKey *secretKey = &keygen->secret_key();
-    *secret_key = const_cast<SecretKey*>(secretKey);
+    SecretKey *key = new SecretKey(keygen->secret_key());
+    *secret_key = key;
     return S_OK;
 }
